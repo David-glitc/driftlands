@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Dynamic SDK must not SSR — mirrors Atomic’s client-only auth shell
- * to avoid “Store not initialized” on hydrate.
+ * Always paint children first (avoid blank shell).
+ * Mount Dynamic only after client hydration — Atomic-style SSR guard.
  */
 const DynamicProvider = dynamic(
   () => import("./DynamicProvider").then((m) => m.DynamicProvider),
@@ -13,5 +13,15 @@ const DynamicProvider = dynamic(
 );
 
 export function ClientAuthShell({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
   return <DynamicProvider>{children}</DynamicProvider>;
 }
