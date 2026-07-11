@@ -1,0 +1,44 @@
+# Coolify: Docker Compose resource — two services from one repo
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "4000"
+      DEMO_MODE: "true"
+      DATABASE_URL: file:/data/driftlands.db
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://driftlands.example.com}
+      JOURNEY_SIGNING_SECRET: ${JOURNEY_SIGNING_SECRET:-change-me}
+      ABLY_API_KEY: ${ABLY_API_KEY:-}
+      REDIS_URL: ${REDIS_URL:-}
+    volumes:
+      - driftlands-data:/data
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://server:4000}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://server:4000/ws}
+        NEXT_PUBLIC_DEMO_MODE: "true"
+        NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID:-d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6}
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+
+volumes:
+  driftlands-data:

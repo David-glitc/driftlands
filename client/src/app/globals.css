@@ -1,0 +1,44 @@
+:root {
+  --coral: #ff6b4a;
+  --coral-deep: #e84a2f;
+  --turquoise: #2ec4b6;
+  --turquoise-deep: #1a9e93;
+  --sun: #ffd166;
+  --sun-bright: #ffe08a;
+  --sky: #5cdbf0;
+  --sky-deep: #3bb4e8;
+  --sand: #fff1d6;
+  --sand-deep: #f0d5a8;
+  --magenta: #ff5c8a;
+  --ink: #1b1f3b;
+  --ink-muted: #3d4466;
+  --success: #3ddc97;
+  --danger: #ff4d6d;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: "Outfit", "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(1200px 800px at 20% 0%, #ffe08a 0%, transparent 55%),
+    radial-gradient(1000px 700px at 90% 10%, #5cdbf0 0%, transparent 50%),
+    linear-gradient(165deg, #fff1d6 0%, #ffd166 35%, #2ec4b6 100%);
+  background-attachment: fixed;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}

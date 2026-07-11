@@ -1,0 +1,25 @@
+{
+  "name": "driftlands",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Driftlands — lightweight 3D survival-journey game on Solana settlement layer",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:client": "pnpm --filter @driftlands/client dev",
+    "dev:server": "pnpm --filter @driftlands/server dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

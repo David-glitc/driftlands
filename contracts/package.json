@@ -1,0 +1,16 @@
+{
+  "name": "@driftlands/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anchor programs: stake vault, revive sink, odds pool, journey attestation",
+  "scripts": {
+    "build": "echo \"Anchor toolchain required: install solana + avm, then run anchor build\"",
+    "test": "echo \"Run: anchor test (requires solana/anchor)\"",
+    "lint": "echo \"ok\"",
+    "typecheck": "echo \"ok\"",
+    "clean": "rimraf target .anchor"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

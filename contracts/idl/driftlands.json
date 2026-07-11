@@ -1,0 +1,18 @@
+{
+  "version": "0.1.0",
+  "name": "driftlands",
+  "instructions": [
+    { "name": "initConfig" },
+    { "name": "stake" },
+    { "name": "unstake" },
+    { "name": "payRevive" },
+    { "name": "createOddsPool" },
+    { "name": "enterPool" },
+    { "name": "postJourneyResult" },
+    { "name": "resolvePool" }
+  ],
+  "metadata": {
+    "address": "DRFTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "note": "Replace with deployed program id after anchor keys sync"
+  }
+}

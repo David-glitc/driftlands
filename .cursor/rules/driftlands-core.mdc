@@ -1,0 +1,15 @@
+---
+description: Driftlands core product and architecture constraints from the PRD
+alwaysApply: true
+---
+
+# Driftlands Project Rules
+
+- Follow `driftlands-full-prd.md` exactly for V1 scope.
+- On-chain = settlement only: stake/level vault, revive sink, odds pool, journey result attestation.
+- Off-chain = journey generation, artifacts, hazard rolls, matchmaking, reputation.
+- Stack: TypeScript monorepo (`shared/`, `server/`, `client/`, `contracts/`), Ably (or WS fallback), Postgres+Redis (SQLite ok for local demo), Solana Anchor.
+- Artifacts and balancing are config-driven — never hardcode drop tables in game logic.
+- Client visual identity: bright coral / turquoise / sun palette; brand-first landing; R3F target 30–40fps.
+- Do not invent out-of-scope features (governance, on-chain NFTs, PvP, mobile-native).
+- Append progress to `DEVELOPMENT.md` with timestamps; keep `implementation-plan.mdc` in sync.

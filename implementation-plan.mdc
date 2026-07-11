@@ -1,0 +1,34 @@
+---
+description: Driftlands V1 implementation plan — mark Done with two-line summaries
+alwaysApply: false
+---
+
+# Implementation Plan
+
+## Phase 0 — Setup
+Status: Done
+- Turborepo workspace: shared, server, client, contracts; CI workflow; shared Zod schemas + artifact catalog.
+- Cursor rules + cursor_project_rules knowledge base created.
+
+## Phase 1 — Anchor programs
+Status: Done
+- Scaffolded `contracts/programs/driftlands` with stake, unstake, pay_revive, odds pool, post_journey_result, resolve_pool.
+- Placeholder program id; build requires Solana + Anchor toolchain.
+
+## Phase 2 — Game server
+Status: Done
+- Express API + journey engine + Prisma SQLite + Redis/Ably optional + WS hub.
+- Signed journey result hashes for on-chain attestation handoff.
+
+## Phase 3 — Three.js / R3F client
+Status: In progress
+- Landing + HUD + death/odds/result UI with GSAP motion; coral-dunes Canvas scene.
+- Next: wire wallet adapter + deploy.
+
+## Phase 4 — Wallet + Sanctum + deploy
+Status: Pending
+- Solana wallet adapter, demo stake UI, Vercel/Fly deploy targets.
+
+## Phase 5 — Odds pool polish + token launch prep
+Status: Pending
+- Live pool UX tied to nodes; free-launch checklist (no team allocation).

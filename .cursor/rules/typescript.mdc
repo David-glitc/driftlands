@@ -1,0 +1,14 @@
+---
+description: Driftlands TypeScript and package conventions
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript Conventions
+
+- Prefer explicit names over short ambiguous identifiers.
+- Shared domain types live in `@driftlands/shared` only — no duplicate models in client/server.
+- Validate config with Zod schemas in `shared/src/schemas.ts`.
+- Server is authoritative for hazard rolls; client never decides survival.
+- Animate UI with GSAP (`useGSAP`, transform/opacity only, `prefers-reduced-motion` via `matchMedia`).
+- R3F: instancing, flat/toon materials, no realtime shadow maps in V1.

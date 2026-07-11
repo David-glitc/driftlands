@@ -1,0 +1,21 @@
+[package]
+name = "driftlands"
+version = "0.1.0"
+description = "Driftlands settlement programs — stake, revive, odds pool, journey result"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "driftlands"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"

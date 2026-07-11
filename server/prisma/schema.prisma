@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Player reputation + soft profile (financial state lives on-chain).
+model Player {
+  id           String   @id /// wallet pubkey base58
+  reputation   Float    @default(0)
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  journeys     Journey[]
+  leaderboard  LeaderboardEntry?
+}
+
+model Journey {
+  id            String   @id
+  playerId      String
+  player        Player   @relation(fields: [playerId], references: [id])
+  seed          Int
+  difficulty    String
+  status        String
+  zoneReached   Int      @default(0)
+  reviveCount   Int      @default(0)
+  configVersion String
+  resultHash    String?
+  inventoryJson String   @default("[]")
+  createdAt     DateTime @default(now())
+  endedAt       DateTime?
+}
+
+model LeaderboardEntry {
+  playerId   String @id
+  player     Player @relation(fields: [playerId], references: [id])
+  reputation Float
+  journeysWon Int  @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+model OddsPoolRecord {
+  id           String   @id
+  journeyId    String
+  nodeId       String
+  outcomesJson String
+  feeBps       Int
+  resolved     Boolean  @default(false)
+  winningOutcomeId String?
+  createdAt    DateTime @default(now())
+}

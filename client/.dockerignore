@@ -1,0 +1,9 @@
+# Client image (Coolify Dockerfile build — set Base Directory empty, Dockerfile path client/Dockerfile)
+node_modules
+.next
+.git
+**/node_modules
+**/.next
+server/prisma/*.db
+*.md
+contracts/target
