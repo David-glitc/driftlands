@@ -20,4 +20,4 @@ redis-data
 postgres-data
 *.db
 *.db-journal
-*.tsbuildinfo
+scripts/.coolify.env

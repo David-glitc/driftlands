@@ -1,37 +1,53 @@
-# Coolify — Driftlands
+# Coolify — Driftlands (ChessOnChain instance)
 
-Repo: https://github.com/David-glitc/driftlands
+## Instance (from ChessOnChain / hitmeup)
 
-## Deploy (Docker Compose) — recommended
+| | |
+|---|---|
+| API | `https://coolify.chessonchain.online/api/v1` |
+| UI | `https://coolify.chessonchain.online` |
+| VPS IP | `109.205.181.119` |
+| Server UUID | `goyjivzepwvgk2egci5nms3i` |
+| Personal project UUID | `qak4ll4915b0ri9gj8a57ztu` (hitmeup) |
+| ChessOnChain project UUID | `qrwo38kzgng040uts5192dgq` |
 
-1. Coolify → **+ New** → **Docker Compose**
-2. Connect GitHub repo `David-glitc/driftlands` (branch `main`)
-3. Compose file: `docker-compose.yml`
-4. Add domains:
-   - **client** service → `driftlands.YOURDOMAIN` (public)
-   - **server** service → `api.driftlands.YOURDOMAIN` (public)
-5. Environment variables (Coolify → Environment):
+Token file (Linux VPS / agent box): `~/.config/chessonchain/coolify.env`  
+Or: `export COOLIFY_TOKEN=...`
 
-```env
-DEMO_MODE=true
-CORS_ORIGIN=https://driftlands.YOURDOMAIN
-NEXT_PUBLIC_API_URL=https://api.driftlands.YOURDOMAIN
-NEXT_PUBLIC_WS_URL=wss://api.driftlands.YOURDOMAIN/ws
-NEXT_PUBLIC_DEMO_MODE=true
-NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6
-JOURNEY_SIGNING_SECRET=<long-random-string>
+Auth: `Authorization: Bearer $COOLIFY_TOKEN`
+
+## Useful endpoints (verified in ChessOnChain scripts)
+
+- `GET /applications`, `GET /services`, `GET /projects`, `GET /servers`
+- `POST /services` — Docker Compose (`docker_compose_raw` base64)
+- `POST /applications/dockerimage` — pull-only GHCR image
+- `POST|PATCH /applications/{uuid}/envs` — `{ key, value }`
+- `GET /applications/{uuid}/start` · `/restart`
+- Deploy webhook: `GET /api/v1/deploy?uuid={uuid}`
+
+## Deploy Driftlands
+
+```bash
+# 1. Token
+mkdir -p ~/.config/chessonchain
+# put COOLIFY_TOKEN=... into ~/.config/chessonchain/coolify.env
+
+# 2. DNS (Cloudflare chessonchain.online)
+#    A  driftlands      → 109.205.181.119 (proxied)
+#    A  api.driftlands  → 109.205.181.119 (proxied)
+
+# 3. Create/start compose service
+node scripts/deploy-coolify.mjs
+node scripts/deploy-coolify.mjs --list
 ```
 
-6. Deploy. First build takes a few minutes (Next standalone + Prisma).
-7. Dynamic dashboard → allow origin `https://driftlands.YOURDOMAIN`
+Suggested URLs:
+- `https://driftlands.chessonchain.online`
+- `https://api.driftlands.chessonchain.online`
 
-## Alternative — two Dockerfile apps
+Env baked by the script into compose: Dynamic env `d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6`, CORS + `NEXT_PUBLIC_*` pointing at those hosts.
 
-| App | Dockerfile | Port | Notes |
-|---|---|---|---|
-| Web | `client/Dockerfile` | 3000 | Set `NEXT_PUBLIC_*` as **build args** |
-| API | `server/Dockerfile` | 4000 | Mount volume `/data` for SQLite |
+## Source of truth
 
-## Local preview
-
-http://localhost:3000 · API http://localhost:4000/api/health
+- ChessOnChain: `InCryptoEncrypted/chessonchain` → `scripts/sync-coolify-env.mjs`, `docs/DEPLOY-CI-COOLIFY.md`
+- hitmeup: `David-glitc/hitmeup` → `scripts/deploy-coolify.mjs`
