@@ -1,4 +1,6 @@
-# Coolify: Docker Compose resource — two services from one repo
+# Coolify-friendly defaults for Driftlands monorepo
+# Use Resource type: Docker Compose → this file
+
 services:
   server:
     build:
@@ -7,38 +9,47 @@ services:
     restart: unless-stopped
     environment:
       PORT: "4000"
-      DEMO_MODE: "true"
+      DEMO_MODE: ${DEMO_MODE:-true}
       DATABASE_URL: file:/data/driftlands.db
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://driftlands.example.com}
-      JOURNEY_SIGNING_SECRET: ${JOURNEY_SIGNING_SECRET:-change-me}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      JOURNEY_SIGNING_SECRET: ${JOURNEY_SIGNING_SECRET:-change-me-in-coolify}
       ABLY_API_KEY: ${ABLY_API_KEY:-}
       REDIS_URL: ${REDIS_URL:-}
     volumes:
       - driftlands-data:/data
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
-      interval: 30s
+      interval: 20s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.driftlands-api.loadbalancer.server.port=4000
 
   client:
     build:
       context: .
       dockerfile: client/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://server:4000}
-        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://server:4000/ws}
-        NEXT_PUBLIC_DEMO_MODE: "true"
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
+        NEXT_PUBLIC_DEMO_MODE: ${NEXT_PUBLIC_DEMO_MODE:-true}
         NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID:-d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6}
     restart: unless-stopped
     depends_on:
-      - server
-    ports:
-      - "3000:3000"
+      server:
+        condition: service_healthy
+    expose:
+      - "3000"
     environment:
       PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.driftlands-web.loadbalancer.server.port=3000
 
 volumes:
   driftlands-data:

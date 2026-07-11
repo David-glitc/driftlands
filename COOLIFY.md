@@ -1,39 +1,37 @@
-# Coolify deploy guide — Driftlands
+# Coolify — Driftlands
 
-## Option A — Docker Compose (recommended)
+Repo: https://github.com/David-glitc/driftlands
 
-1. Push this repo to GitHub.
-2. Coolify → **New Resource** → **Docker Compose**.
-3. Connect the git repo; compose file: `docker-compose.yml`.
-4. Set env vars:
+## Deploy (Docker Compose) — recommended
 
-| Var | Example |
-|---|---|
-| `CORS_ORIGIN` | `https://your-client-domain` |
-| `NEXT_PUBLIC_API_URL` | `https://your-api-domain` |
-| `NEXT_PUBLIC_WS_URL` | `wss://your-api-domain/ws` |
-| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | `d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6` (Atomic) |
-| `JOURNEY_SIGNING_SECRET` | long random |
+1. Coolify → **+ New** → **Docker Compose**
+2. Connect GitHub repo `David-glitc/driftlands` (branch `main`)
+3. Compose file: `docker-compose.yml`
+4. Add domains:
+   - **client** service → `driftlands.YOURDOMAIN` (public)
+   - **server** service → `api.driftlands.YOURDOMAIN` (public)
+5. Environment variables (Coolify → Environment):
 
-5. Expose `client:3000` publicly; expose `server:4000` (or only internal + reverse proxy).
-6. In Dynamic dashboard, add your Coolify client domain to allowed origins.
+```env
+DEMO_MODE=true
+CORS_ORIGIN=https://driftlands.YOURDOMAIN
+NEXT_PUBLIC_API_URL=https://api.driftlands.YOURDOMAIN
+NEXT_PUBLIC_WS_URL=wss://api.driftlands.YOURDOMAIN/ws
+NEXT_PUBLIC_DEMO_MODE=true
+NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6
+JOURNEY_SIGNING_SECRET=<long-random-string>
+```
 
-## Option B — Two Dockerfile apps
+6. Deploy. First build takes a few minutes (Next standalone + Prisma).
+7. Dynamic dashboard → allow origin `https://driftlands.YOURDOMAIN`
 
-### Client (Next.js)
+## Alternative — two Dockerfile apps
 
-- Build pack: **Dockerfile**
-- Dockerfile location: `client/Dockerfile`
-- Port: `3000`
-- Build args / env: `NEXT_PUBLIC_*` as above
+| App | Dockerfile | Port | Notes |
+|---|---|---|---|
+| Web | `client/Dockerfile` | 3000 | Set `NEXT_PUBLIC_*` as **build args** |
+| API | `server/Dockerfile` | 4000 | Mount volume `/data` for SQLite |
 
-### Server (API)
+## Local preview
 
-- Dockerfile location: `server/Dockerfile`
-- Port: `4000`
-- Persistent volume on `/data` for SQLite
-- Env: `DATABASE_URL=file:/data/driftlands.db`, `CORS_ORIGIN`, `DEMO_MODE`
-
-## Dynamic wallet
-
-Uses Atomic’s environment id `d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6` (same as Atomic `DynamicProvider` fallback).
+http://localhost:3000 · API http://localhost:4000/api/health

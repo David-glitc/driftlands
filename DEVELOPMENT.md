@@ -26,3 +26,8 @@
 
 - Replaced low-poly flat dunes with HD desert: displaced terrain, PBR materials, Sky/Environment/SoftShadows, path ribbon, rock field, humanoid wanderer, cinematic camera.
 - Full-bleed immersive stage + slim glass HUD; gameplay loop still button-advance (depth pass later).
+
+## 2026-07-11 — Coolify harden
+
+- Bookworm-based Dockerfiles + healthchecks; compose exposes Traefik-friendly labels.
+- Need Coolify panel URL/token (or invite) to finish remote deploy from here.
