@@ -42,3 +42,15 @@ button {
 a {
   color: inherit;
 }
+
+/* Keep Driftlands palette when Dynamic injects its theme CSS */
+body {
+  background: radial-gradient(1200px 800px at 20% 0%, #ffe08a 0%, transparent 55%),
+    radial-gradient(1000px 700px at 90% 10%, #5cdbf0 0%, transparent 50%),
+    linear-gradient(165deg, #fff1d6 0%, #ffd166 35%, #2ec4b6 100%) !important;
+  color: var(--ink) !important;
+}
+
+.dl-wallet {
+  min-height: 40px;
+}

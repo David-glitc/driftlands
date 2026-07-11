@@ -21,3 +21,8 @@
 - Wired `@dynamic-labs/sdk-react-core` + Solana connectors using Atomic env id `d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6`.
 - Client-only auth shell (Atomic pattern) + wallet → playerId sync.
 - Added `client/Dockerfile`, `server/Dockerfile`, `docker-compose.yml`, `COOLIFY.md` for Coolify git/compose deploy.
+
+## 2026-07-11 — Visual cleanup pass
+
+- Replaced low-poly flat dunes with HD desert: displaced terrain, PBR materials, Sky/Environment/SoftShadows, path ribbon, rock field, humanoid wanderer, cinematic camera.
+- Full-bleed immersive stage + slim glass HUD; gameplay loop still button-advance (depth pass later).

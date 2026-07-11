@@ -1,27 +1,32 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useState, type ReactNode } from "react";
+import { Component, type ReactNode } from "react";
+import { DynamicProvider } from "./DynamicProvider";
 
-/**
- * Always paint children first (avoid blank shell).
- * Mount Dynamic only after client hydration — Atomic-style SSR guard.
- */
-const DynamicProvider = dynamic(
-  () => import("./DynamicProvider").then((m) => m.DynamicProvider),
-  { ssr: false },
-);
+class DynamicErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
 
-export function ClientAuthShell({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <>{children}</>;
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
 
-  return <DynamicProvider>{children}</DynamicProvider>;
+  render() {
+    if (this.state.failed) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
+/**
+ * Client-only Dynamic wrap with hard fallback so a wallet SDK failure
+ * never blanks the Driftlands landing (lesson from Atomic boot crashes).
+ */
+export function ClientAuthShell({ children }: { children: ReactNode }) {
+  return (
+    <DynamicErrorBoundary fallback={children}>
+      <DynamicProvider>{children}</DynamicProvider>
+    </DynamicErrorBoundary>
+  );
 }

@@ -1,104 +1,62 @@
 "use client";
 
-import { useRef } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import type { JourneyNode, PlayerSession } from "@driftlands/shared";
 import { getArtifactById } from "@driftlands/shared";
 
 type Props = {
   session: PlayerSession;
   currentNode?: JourneyNode;
+  totalNodes: number;
   log: string[];
   busy: boolean;
   canAdvance: boolean;
   onAdvance: () => void;
 };
 
-export function Hud({ session, currentNode, log, busy, canAdvance, onAdvance }: Props) {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      gsap.from(".dl-hud-panel", {
-        autoAlpha: 0,
-        y: 24,
-        duration: 0.55,
-        ease: "power3.out",
-      });
-    },
-    { scope: rootRef },
-  );
-
-  useGSAP(
-    () => {
-      gsap.from(".dl-chip", {
-        autoAlpha: 0,
-        scale: 0.85,
-        stagger: 0.06,
-        duration: 0.35,
-        ease: "back.out(1.6)",
-        overwrite: "auto",
-      });
-    },
-    { scope: rootRef, dependencies: [session.inventory.length], revertOnUpdate: true },
-  );
+export function Hud({ session, currentNode, totalNodes, log, busy, canAdvance, onAdvance }: Props) {
+  const progress = Math.min(100, ((session.zoneIndex + 1) / Math.max(1, totalNodes)) * 100);
 
   return (
-    <div ref={rootRef} style={styles.wrap}>
-      <div className="dl-hud-panel" style={styles.panel}>
-        <div style={styles.row}>
-          <Stat label="Level" value={session.levelScore.toFixed(1)} />
-          <Stat label="Zone" value={`${session.zoneIndex + 1}`} />
-          <Stat label="Revives" value={`${session.reviveCount}/3`} />
-          <Stat label="Rep" value={`${session.reputation}`} />
+    <div style={styles.wrap}>
+      <div style={styles.top}>
+        <div style={styles.pill}>
+          <span style={styles.muted}>ZONE</span>
+          <strong>{session.zoneIndex + 1}</strong>
         </div>
-        <p style={styles.node}>
-          {currentNode ? (
-            <>
-              <strong>{currentNode.label}</strong>
-              <span style={{ opacity: 0.75 }}>
-                {" "}
-                · {currentNode.kind} · diff {currentNode.difficulty}
-              </span>
-            </>
-          ) : (
-            "—"
-          )}
-        </p>
-        <div style={styles.inv}>
-          {session.inventory.length === 0 && <span style={styles.muted}>No artifacts yet</span>}
-          {session.inventory.map((item) => {
-            const def = getArtifactById(item.artifactId);
-            return (
-              <span
-                key={item.instanceId}
-                className="dl-chip"
-                style={{ ...styles.chip, background: def?.color ?? "#ffd166" }}
-              >
-                {def?.displayName ?? item.artifactId}
-              </span>
-            );
-          })}
+        <div style={styles.barTrack}>
+          <div style={{ ...styles.barFill, width: `${progress}%` }} />
+        </div>
+        <div style={styles.pill}>
+          <span style={styles.muted}>LVL</span>
+          <strong>{session.levelScore.toFixed(0)}</strong>
+        </div>
+      </div>
+
+      <div style={styles.bottom}>
+        <div style={styles.panel}>
+          <p style={styles.nodeTitle}>{currentNode?.label ?? "Open dunes"}</p>
+          <p style={styles.nodeMeta}>
+            {currentNode ? `${currentNode.kind} · difficulty ${currentNode.difficulty}` : "—"}
+            {" · "}
+            revives {session.reviveCount}/3
+          </p>
+          <div style={styles.inv}>
+            {session.inventory.length === 0 && <span style={styles.muted}>No artifacts</span>}
+            {session.inventory.map((item) => {
+              const def = getArtifactById(item.artifactId);
+              return (
+                <span key={item.instanceId} style={{ ...styles.chip, background: def?.color ?? "#ffd166" }}>
+                  {def?.displayName ?? item.artifactId}
+                </span>
+              );
+            })}
+          </div>
+          {log[0] && <p style={styles.logLine}>{log[0]}</p>}
         </div>
         <button type="button" disabled={!canAdvance || busy} onClick={onAdvance} style={styles.advance}>
-          {busy ? "Resolving…" : "Push Forward"}
+          {busy ? "Resolving…" : "Advance"}
         </button>
-        <ul style={styles.log}>
-          {log.map((line, i) => (
-            <li key={`${i}-${line}`}>{line}</li>
-          ))}
-        </ul>
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={styles.statLabel}>{label}</div>
-      <div style={styles.statValue}>{value}</div>
     </div>
   );
 }
@@ -106,53 +64,85 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 16,
+    inset: 0,
     pointerEvents: "none",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  top: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    maxWidth: 520,
+    margin: "0 auto",
+    width: "100%",
+  },
+  pill: {
+    pointerEvents: "auto",
+    background: "rgba(20, 24, 40, 0.55)",
+    color: "#fff",
+    borderRadius: 999,
+    padding: "8px 12px",
+    display: "flex",
+    gap: 6,
+    alignItems: "baseline",
+    backdropFilter: "blur(10px)",
+    fontSize: 14,
+  },
+  muted: { opacity: 0.65, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em" },
+  barTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    background: "rgba(20,24,40,0.35)",
+    overflow: "hidden",
+  },
+  barFill: {
+    height: "100%",
+    background: "linear-gradient(90deg, #ff6b4a, #ffd166)",
+    borderRadius: 999,
+  },
+  bottom: {
+    display: "flex",
+    gap: 12,
+    alignItems: "flex-end",
+    maxWidth: 720,
+    width: "100%",
+    margin: "0 auto",
   },
   panel: {
     pointerEvents: "auto",
-    maxWidth: 420,
-    background: "rgba(255, 241, 214, 0.92)",
-    border: "3px solid #1b1f3b",
-    borderRadius: 20,
-    padding: 14,
-    backdropFilter: "blur(8px)",
-    willChange: "transform, opacity",
+    flex: 1,
+    background: "rgba(20, 24, 40, 0.62)",
+    color: "#fff",
+    borderRadius: 18,
+    padding: "14px 16px",
+    backdropFilter: "blur(12px)",
+    border: "1px solid rgba(255,255,255,0.12)",
   },
-  row: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 10 },
-  statLabel: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", opacity: 0.6 },
-  statValue: { fontWeight: 800, fontSize: 18 },
-  node: { margin: "0 0 10px", fontSize: 14 },
-  inv: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, minHeight: 28 },
+  nodeTitle: { margin: 0, fontSize: 18, fontWeight: 800, fontFamily: '"Space Grotesk", sans-serif' },
+  nodeMeta: { margin: "4px 0 10px", fontSize: 12, opacity: 0.75 },
+  inv: { display: "flex", flexWrap: "wrap", gap: 6 },
   chip: {
-    border: "2px solid #1b1f3b",
     borderRadius: 999,
     padding: "2px 10px",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
-    willChange: "transform, opacity",
+    color: "#1b1f3b",
   },
-  muted: { fontSize: 13, opacity: 0.6 },
+  logLine: { margin: "10px 0 0", fontSize: 12, opacity: 0.8 },
   advance: {
-    width: "100%",
-    border: "3px solid #1b1f3b",
-    background: "#ff6b4a",
+    pointerEvents: "auto",
+    border: "none",
+    background: "linear-gradient(135deg, #ff6b4a, #e84a2f)",
     color: "#fff",
-    borderRadius: 14,
-    padding: "12px 14px",
+    borderRadius: 16,
+    padding: "18px 28px",
     fontWeight: 800,
     fontSize: 16,
-    boxShadow: "0 5px 0 #1b1f3b",
-  },
-  log: {
-    margin: "10px 0 0",
-    padding: 0,
-    listStyle: "none",
-    fontSize: 12,
-    color: "#3d4466",
-    maxHeight: 72,
-    overflow: "auto",
+    boxShadow: "0 12px 32px rgba(232, 74, 47, 0.45)",
+    whiteSpace: "nowrap",
   },
 };

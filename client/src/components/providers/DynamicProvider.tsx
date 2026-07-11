@@ -3,7 +3,6 @@
 import {
   DynamicContextProvider,
   DynamicWidget,
-  DynamicUserProfile,
 } from "@dynamic-labs/sdk-react-core";
 import { SolanaWalletConnectors } from "@dynamic-labs/solana";
 import type { ReactNode } from "react";
@@ -26,7 +25,6 @@ export function DynamicProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      <DynamicUserProfile />
     </DynamicContextProvider>
   );
 }

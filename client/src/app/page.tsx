@@ -13,7 +13,7 @@ import { ResultBanner } from "@/components/ResultBanner";
 
 const JourneyCanvas = dynamic(() => import("@/components/JourneyCanvas").then((m) => m.JourneyCanvas), {
   ssr: false,
-  loading: () => <div className="canvas-fallback">Loading dunes…</div>,
+  loading: () => <div className="canvas-fallback">Entering the dunes…</div>,
 });
 
 type EndState = {
@@ -34,20 +34,21 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const pushLog = useCallback((line: string) => {
-    setLog((prev) => [line, ...prev].slice(0, 8));
+    setLog((prev) => [line, ...prev].slice(0, 6));
   }, []);
 
   const start = async (difficulty: "easy" | "standard" | "hard") => {
     setBusy(true);
     setError(null);
     setEnd(null);
+    setLog([]);
     try {
       const data = await api.startJourney({ playerId, difficulty, levelScore: 14 });
       setJourney(data.journey);
       setSession(data.session);
       setReviveFee(data.reviveFeePreview);
       setPool(null);
-      pushLog(`Journey ${data.journey.journeyId} — coral dunes await.`);
+      pushLog("You step onto the coral dunes.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start");
     } finally {
@@ -66,12 +67,12 @@ export default function HomePage() {
       const node = journey.nodes.find((n) => n.nodeId === data.result.nodeId);
       pushLog(
         data.result.survived
-          ? `Cleared ${node?.label ?? data.result.nodeId} (${Math.round(data.result.survivalChance * 100)}% odds)`
-          : `Fell at ${node?.label ?? data.result.nodeId}`,
+          ? `Cleared ${node?.label ?? "node"} · ${Math.round(data.result.survivalChance * 100)}% odds`
+          : `Down at ${node?.label ?? "node"}`,
       );
       if (data.result.droppedArtifact) {
         const def = getArtifactById(data.result.droppedArtifact.artifactId);
-        pushLog(`Looted ${def?.displayName ?? data.result.droppedArtifact.artifactId}`);
+        pushLog(`Found ${def?.displayName ?? "an artifact"}`);
       }
       if (data.ended) {
         setEnd({
@@ -79,7 +80,6 @@ export default function HomePage() {
           reputationDelta: data.ended.reputationDelta,
           resultHash: data.ended.resultHash,
         });
-        pushLog(data.ended.survived ? "You survived the drift." : "Permadeath — run over.");
       }
       if (data.session.status === "awaiting_revive") {
         const fresh = await api.getJourney(journey.journeyId);
@@ -99,7 +99,7 @@ export default function HomePage() {
       const data = await api.revive(journey.journeyId);
       setSession(data.session);
       setReviveFee(null);
-      pushLog(`Revived for ${data.fee} $DRIFT (demo).`);
+      pushLog(`Revived · ${data.fee} $DRIFT`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Revive failed");
     } finally {
@@ -116,7 +116,7 @@ export default function HomePage() {
         amount: 0.5,
       });
       setPool(data.pool);
-      pushLog(`Bought into pool: ${outcomeId}`);
+      pushLog(`Pool entry · ${outcomeId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Pool entry failed");
     }
@@ -148,15 +148,17 @@ export default function HomePage() {
 
   return (
     <main style={styles.shell}>
-      <header style={styles.top}>
-        <div>
-          <p style={styles.brand}>DRIFTLANDS</p>
-          <p style={styles.sub}>Coral Dunes · {journey.difficulty}</p>
-        </div>
-        <button type="button" style={styles.ghostBtn} onClick={() => { setJourney(null); setSession(null); setEnd(null); }}>
-          Leave
-        </button>
-      </header>
+      <button
+        type="button"
+        style={styles.leave}
+        onClick={() => {
+          setJourney(null);
+          setSession(null);
+          setEnd(null);
+        }}
+      >
+        Leave
+      </button>
 
       <div style={styles.stage}>
         <JourneyCanvas
@@ -168,6 +170,7 @@ export default function HomePage() {
         <Hud
           session={session}
           currentNode={currentNode}
+          totalNodes={journey.nodes.length}
           log={log}
           busy={busy}
           onAdvance={advance}
@@ -181,17 +184,27 @@ export default function HomePage() {
       {session.status === "awaiting_revive" && (
         <DeathModal fee={reviveFee} reviveCount={session.reviveCount} busy={busy} onRevive={revive} />
       )}
-      {end && <ResultBanner end={end} onAgain={() => { setJourney(null); setSession(null); setEnd(null); }} />}
+      {end && (
+        <ResultBanner
+          end={end}
+          onAgain={() => {
+            setJourney(null);
+            setSession(null);
+            setEnd(null);
+          }}
+        />
+      )}
       {error && <p style={styles.error}>{error}</p>}
 
       <style jsx global>{`
         .canvas-fallback {
           height: 100%;
+          min-height: 100vh;
           display: grid;
           place-items: center;
-          color: #1b1f3b;
+          color: #fff;
           font-weight: 700;
-          background: linear-gradient(180deg, #5cdbf0, #ffd166);
+          background: linear-gradient(180deg, #87c5e8, #e8c89a);
         }
       `}</style>
     </main>
@@ -201,46 +214,35 @@ export default function HomePage() {
 const styles: Record<string, React.CSSProperties> = {
   shell: {
     minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    padding: "16px 20px 28px",
-    gap: 12,
+    position: "relative",
+    background: "#0b1220",
   },
-  top: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  brand: {
-    margin: 0,
-    fontFamily: '"Space Grotesk", sans-serif',
-    fontWeight: 700,
-    fontSize: "clamp(2rem, 5vw, 3.2rem)",
-    letterSpacing: "-0.04em",
-    color: "#1b1f3b",
-    textShadow: "0 2px 0 #ffe08a",
-  },
-  sub: { margin: "4px 0 0", color: "#3d4466", fontWeight: 600 },
-  ghostBtn: {
-    border: "2px solid #1b1f3b",
-    background: "transparent",
+  leave: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    zIndex: 30,
+    border: "1px solid rgba(255,255,255,0.25)",
+    background: "rgba(20,24,40,0.55)",
+    color: "#fff",
     borderRadius: 999,
-    padding: "8px 16px",
+    padding: "8px 14px",
     fontWeight: 700,
+    backdropFilter: "blur(10px)",
   },
   stage: {
     position: "relative",
-    flex: 1,
-    minHeight: "68vh",
-    borderRadius: 28,
+    minHeight: "100vh",
+    height: "100vh",
     overflow: "hidden",
-    border: "3px solid #1b1f3b",
-    boxShadow: "0 18px 0 #1b1f3b",
-    background: "#3bb4e8",
   },
   error: {
+    position: "fixed",
+    bottom: 16,
+    left: 16,
     color: "#ff4d6d",
     fontWeight: 700,
     margin: 0,
+    zIndex: 40,
   },
 };
