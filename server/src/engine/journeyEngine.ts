@@ -47,9 +47,18 @@ export function startJourney(params: {
   difficulty?: JourneySeed["difficulty"];
   levelScore?: number;
   reputation?: number;
+  /** Force a fresh run even if one is active */
+  forceNew?: boolean;
 }): ActiveJourney {
-  const existing = listActiveForPlayer(params.playerId);
-  if (existing) return existing;
+  if (!params.forceNew) {
+    const existing = listActiveForPlayer(params.playerId);
+    if (existing) return existing;
+  } else {
+    const existing = listActiveForPlayer(params.playerId);
+    if (existing) {
+      existing.session.status = "abandoned";
+    }
+  }
 
   const journeyId = `j_${nanoid(10)}`;
   const seed = randomInt(1, 2_147_483_647);

@@ -32,14 +32,19 @@ export async function persistJourneyStart(params: {
   configVersion: string;
 }) {
   await ensurePlayer(params.playerId);
-  await prisma.journey.create({
-    data: {
+  await prisma.journey.upsert({
+    where: { id: params.journeyId },
+    create: {
       id: params.journeyId,
       playerId: params.playerId,
       seed: params.seed,
       difficulty: params.difficulty,
       status: "active",
       configVersion: params.configVersion,
+    },
+    update: {
+      status: "active",
+      difficulty: params.difficulty,
     },
   });
 }

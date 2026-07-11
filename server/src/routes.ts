@@ -34,7 +34,7 @@ api.post("/journeys", async (req, res) => {
     const levelScore = Number(req.body.levelScore ?? 12);
 
     await ensurePlayer(playerId);
-    const active = startJourney({ playerId, difficulty, levelScore });
+    const active = startJourney({ playerId, difficulty, levelScore, forceNew: true });
     await persistJourneyStart({
       journeyId: active.seed.journeyId,
       playerId,
