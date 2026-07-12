@@ -22,6 +22,7 @@ import { TokenSidebar } from "@/components/TokenSidebar";
 import { SwapModal } from "@/components/SwapModal";
 import { Dashboard } from "@/components/Dashboard";
 import { DialoguePanel } from "@/components/DialoguePanel";
+import { TutorialOverlay } from "@/components/TutorialOverlay";
 import { useRealtime } from "@/lib/realtime";
 import type { ResourceWallet, DialogueTree } from "@driftlands/shared";
 import { EMPTY_WALLET, getScriptForNode } from "@driftlands/shared";
@@ -145,6 +146,7 @@ export default function HomePage() {
         setLatestDropId(data.result.droppedArtifact.artifactId);
         pushLog(`Found ${def?.displayName ?? "a fragment"}`);
         if (settings.soundEnabled) playArtifact();
+        api.recordArtifact(playerId).catch(() => {});
       } else {
         setLatestDropId(null);
       }
@@ -158,6 +160,11 @@ export default function HomePage() {
           playJourneyEnd(data.ended.survived);
           stopAmbient();
         }
+        api.awardXp(playerId, {
+          survived: data.ended.survived,
+          zonesReached: data.session.zoneIndex,
+          reviveCount: data.session.reviveCount,
+        }).catch(() => {});
       }
       if (data.session.status === "awaiting_revive" && settings.soundEnabled) {
         playDeath();
@@ -251,10 +258,16 @@ export default function HomePage() {
         setLatestDropId(data.result.droppedArtifact.artifactId);
         pushLog(`Found ${getArtifactById(data.result.droppedArtifact.artifactId)?.displayName ?? "a fragment"}`);
         if (settings.soundEnabled) playArtifact();
+        api.recordArtifact(playerId).catch(() => {});
       } else { setLatestDropId(null); }
       if (data.ended) {
         setEnd({ survived: data.ended.survived, reputationDelta: data.ended.reputationDelta, resultHash: data.ended.resultHash });
         if (settings.soundEnabled) { playJourneyEnd(data.ended.survived); stopAmbient(); }
+        api.awardXp(playerId, {
+          survived: data.ended.survived,
+          zonesReached: data.session.zoneIndex,
+          reviveCount: data.session.reviveCount,
+        }).catch(() => {});
       }
       if (data.session.status === "awaiting_revive" && settings.soundEnabled) playDeath();
       if (data.result.survived && settings.soundEnabled) playHazard(data.result.levelBonus ?? 0.3);
@@ -277,6 +290,10 @@ export default function HomePage() {
     if (stored) setPlayerId(stored);
     setLevel(loadDemoLevel(stored ?? "Wanderer"));
     setSettings(loadSettings());
+    // Fire streak login
+    if (stored && stored !== "Wanderer") {
+      api.loginStreak(stored).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -387,6 +404,7 @@ export default function HomePage() {
         onOpenHotkeys={() => setHotkeysOpen(true)}
         onOpenProfile={() => setProfileOpen(true)}
       />
+      <TutorialOverlay />
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

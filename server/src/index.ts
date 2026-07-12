@@ -46,6 +46,17 @@ setInterval(() => {
   }
 }, 60_000).unref();
 
+/* ── API request timeout (10s) ── */
+app.use("/api", (_req, res, next) => {
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({ error: "Request timeout" });
+    }
+  }, 10_000);
+  res.on("finish", () => clearTimeout(timer));
+  next();
+});
+
 app.use("/api", api);
 
 app.get("/", (_req, res) => {

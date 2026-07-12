@@ -57,6 +57,10 @@ export function Landing({
 
   useEffect(() => {
     api.leaderboard().then((d) => setLb(d.entries.slice(0, 5))).catch(() => {});
+    const interval = setInterval(() => {
+      api.leaderboard().then((d) => setLb(d.entries.slice(0, 5))).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   useGSAP(

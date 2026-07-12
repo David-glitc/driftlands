@@ -107,4 +107,27 @@ export const api = {
   reviveRoom(roomId: string, body: { playerId: string }) {
     return request<{ player: RoomPlayer }>(`/rooms/${roomId}/revive`, { method: "POST", body: JSON.stringify(body) });
   },
+
+  /* ── Profile ── */
+
+  loginStreak(playerId: string) {
+    return request<{ streak: number; multiplier: number; reward: string; brokeStreak: boolean }>(
+      `/profile/${playerId}/streak`,
+      { method: "POST", body: "{}" },
+    );
+  },
+
+  awardXp(playerId: string, body: { survived: boolean; zonesReached: number; reviveCount: number }) {
+    return request<{ xp: number; profile: unknown }>(`/profile/${playerId}/xp`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  recordArtifact(playerId: string) {
+    return request<{ profile: unknown }>(`/profile/${playerId}/artifact`, {
+      method: "POST",
+      body: "{}",
+    });
+  },
 };

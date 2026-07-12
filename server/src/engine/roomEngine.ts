@@ -11,6 +11,17 @@ import { realtime } from "../realtime.js";
 
 const rooms = new Map<string, GameRoom>();
 
+// Room stats logging every 60s
+setInterval(() => {
+  const active = rooms.size;
+  const waiting = [...rooms.values()].filter((r) => r.status === "waiting").length;
+  const inProgress = [...rooms.values()].filter((r) => r.status === "in_progress").length;
+  const totalPlayers = [...rooms.values()].reduce((sum, r) => sum + r.players.length, 0);
+  if (active > 0) {
+    console.log(`[driftlands] rooms: ${active} (${waiting} waiting, ${inProgress} in-progress), players: ${totalPlayers}`);
+  }
+}, 60_000).unref();
+
 export function getRoom(roomId: string): GameRoom | undefined {
   return rooms.get(roomId);
 }

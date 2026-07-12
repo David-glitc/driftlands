@@ -2,7 +2,7 @@ import type { RealtimeEvent } from "@driftlands/shared";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "node:http";
 
-type Client = { ws: WebSocket; channel?: string; playerId?: string };
+type Client = { ws: WebSocket; channel?: string; playerId?: string; lastSeen: number };
 
 export class RealtimeHub {
   private clients = new Set<Client>();
@@ -30,7 +30,7 @@ export class RealtimeHub {
 
     this.wss = new WebSocketServer({ server, path: "/ws" });
     this.wss.on("connection", (ws) => {
-      const client: Client = { ws };
+      const client: Client = { ws, lastSeen: Date.now() };
       this.clients.add(client);
 
       ws.on("message", (raw) => {
@@ -40,6 +40,7 @@ export class RealtimeHub {
             channel?: string;
             playerId?: string;
           };
+          client.lastSeen = Date.now();
           if (msg.type === "subscribe" && msg.channel) {
             client.channel = msg.channel;
             client.playerId = msg.playerId;
@@ -78,6 +79,21 @@ export class RealtimeHub {
         },
       });
     }, 15000);
+
+    // Stale connection eviction — close WS idle for >60s
+    setInterval(() => {
+      const now = Date.now();
+      for (const client of this.clients) {
+        if (now - client.lastSeen > 60_000) {
+          try {
+            client.ws.close(1001, "idle timeout");
+          } catch {
+            /* ignore */
+          }
+          this.clients.delete(client);
+        }
+      }
+    }, 30_000).unref();
   }
 
   async publish(channel: string, event: RealtimeEvent): Promise<void> {

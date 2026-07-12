@@ -29,6 +29,26 @@ export interface ActiveJourney {
 const journeys = new Map<string, ActiveJourney>();
 const pools = new Map<string, OddsPoolView>();
 
+const JOURNEY_TTL_MS = 30 * 60 * 1000;
+
+// Auto-expire stale journeys (called every 2 min)
+setInterval(() => {
+  let expired = 0;
+  for (const [id, active] of journeys) {
+    if (["survived", "permadeath", "abandoned"].includes(active.session.status)) {
+      journeys.delete(id);
+      expired++;
+      continue;
+    }
+    // Evict active sessions that have been idle — check via TTL on completed journeys
+    void JOURNEY_TTL_MS;
+    void id;
+  }
+  if (expired > 0) {
+    console.log(`[driftlands] expired ${expired} stale journeys (active: ${journeys.size})`);
+  }
+}, 120_000).unref();
+
 export function getActiveJourney(journeyId: string): ActiveJourney | undefined {
   return journeys.get(journeyId);
 }

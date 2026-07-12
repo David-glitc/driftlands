@@ -15,6 +15,10 @@ export function useRealtime(channel: string | null, onEvent?: EventHandler) {
   handlersRef.current = onEvent;
   const channelRef = useRef(channel);
   channelRef.current = channel;
+  const pingStartRef = useRef(0);
+
+  // Exponential backoff state
+  let reconnectAttempts = 0;
 
   const send = useCallback((data: unknown) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -34,6 +38,7 @@ export function useRealtime(channel: string | null, onEvent?: EventHandler) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        reconnectAttempts = 0;
         setConnected(true);
         const ch = channelRef.current;
         if (ch) {
@@ -41,7 +46,10 @@ export function useRealtime(channel: string | null, onEvent?: EventHandler) {
         }
 
         pingTimer = setInterval(() => {
-          ws.send(JSON.stringify({ type: "ping" }));
+          if (ws.readyState === WebSocket.OPEN) {
+            pingStartRef.current = Date.now();
+            ws.send(JSON.stringify({ type: "ping" }));
+          }
         }, 10000);
       };
 
@@ -49,7 +57,7 @@ export function useRealtime(channel: string | null, onEvent?: EventHandler) {
         try {
           const data = JSON.parse(String(msg.data));
           if (data.type === "pong") {
-            setLatency(Date.now() - latency);
+            setLatency(Date.now() - (pingStartRef.current ?? Date.now()));
             return;
           }
           if (data.type === "connected") return;
@@ -64,7 +72,10 @@ export function useRealtime(channel: string | null, onEvent?: EventHandler) {
       ws.onclose = () => {
         setConnected(false);
         clearInterval(pingTimer);
-        reconnectTimer = setTimeout(connect, 2000);
+        // Exponential backoff: 2s → 4s → 8s → 16s → max 30s
+        const delay = Math.min(30_000, 2000 * Math.pow(2, reconnectAttempts));
+        reconnectAttempts++;
+        reconnectTimer = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {
