@@ -16,7 +16,7 @@ import { ResultBanner } from "@/components/ResultBanner";
 import { AppChrome } from "@/components/AppChrome";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { HotkeysManual } from "@/components/HotkeysManual";
-import { ProfilePanel } from "@/components/ProfilePanel";
+import { FullProfilePage } from "@/components/FullProfilePage";
 import { RoomPanel } from "@/components/RoomPanel";
 import { TokenSidebar } from "@/components/TokenSidebar";
 import { SwapModal } from "@/components/SwapModal";
@@ -394,13 +394,10 @@ export default function HomePage() {
         onSettings={setSettings}
       />
       <HotkeysManual open={hotkeysOpen} onClose={() => setHotkeysOpen(false)} />
-      <ProfilePanel
+      <FullProfilePage
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         playerId={playerId}
-        inventory={session?.inventory}
-        reputation={session?.reputation ?? 0}
-        journeysWon={0}
       />
       <SwapModal
         open={swapOpen}

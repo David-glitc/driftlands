@@ -27,6 +27,7 @@ import {
   advanceRoomPlayer,
   reviveRoomPlayer,
 } from "./engine/roomEngine.js";
+import { getProfile, loginStreak, awardJourneyXp, recordArtifactFound } from "./engine/profileEngine.js";
 
 export const api: ExpressRouter = Router();
 
@@ -326,4 +327,31 @@ api.post("/rooms/:id/revive", (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
   }
+});
+
+/* ── Profiles ── */
+
+api.get("/profile/:playerId", (req, res) => {
+  const profile = getProfile(req.params.playerId);
+  res.json({ profile });
+});
+
+api.post("/profile/:playerId/streak", (req, res) => {
+  const result = loginStreak(req.params.playerId);
+  res.json(result);
+});
+
+api.post("/profile/:playerId/xp", (req, res) => {
+  const { survived, zonesReached, reviveCount } = req.body as {
+    survived: boolean;
+    zonesReached: number;
+    reviveCount: number;
+  };
+  const xp = awardJourneyXp(req.params.playerId, survived, Number(zonesReached), Number(reviveCount));
+  res.json({ xp, profile: getProfile(req.params.playerId) });
+});
+
+api.post("/profile/:playerId/artifact", (req, res) => {
+  recordArtifactFound(req.params.playerId);
+  res.json({ profile: getProfile(req.params.playerId) });
 });

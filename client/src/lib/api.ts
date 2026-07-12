@@ -24,6 +24,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  request,
   startJourney(body: { playerId: string; difficulty: string; levelScore: number }) {
     return request<{
       journey: JourneySeed;
