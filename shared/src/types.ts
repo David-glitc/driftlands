@@ -45,6 +45,19 @@ export interface LevelStateView {
   stakedAt: number;
 }
 
+export interface ArtifactStats {
+  /** Raw combat power contribution (0–100). */
+  power: number;
+  /** Broad survivability / general hazard help (0–100). */
+  vitality: number;
+  /** Specialized resist focus (0–100). */
+  focus: number;
+  /** Soft drop / fortune bias (0–100). */
+  luck: number;
+  /** Loadout weight — overweight soft-caps survival (0–100). */
+  weight: number;
+}
+
 export interface ArtifactDefinition {
   artifactId: ArtifactId;
   category: ArtifactCategory;
@@ -59,6 +72,7 @@ export interface ArtifactDefinition {
   flavorText: string;
   displayName: string;
   color: string;
+  stats: ArtifactStats;
 }
 
 export interface EquippedArtifact {
@@ -140,14 +154,44 @@ export interface JourneyResultPayload {
   resultHash: string;
 }
 
+export type RoomStatus = "waiting" | "in_progress" | "finished";
+
+export interface RoomPlayer {
+  playerId: string;
+  displayName: string;
+  joinedAt: number;
+  ready: boolean;
+  session?: PlayerSession;
+}
+
+export interface GameRoom {
+  roomId: string;
+  name: string;
+  hostId: string;
+  players: RoomPlayer[];
+  maxPlayers: number;
+  difficulty: "easy" | "standard" | "hard";
+  status: RoomStatus;
+  createdAt: number;
+  journeySeed?: JourneySeed;
+}
+
 /** Realtime channel event envelopes (Ably / WS). */
 export type RealtimeEvent =
   | { type: "journey.started"; payload: { journeyId: JourneyId; seed: number } }
   | { type: "player.moved"; payload: { playerId: string; zoneIndex: number; position: { x: number; y: number; z: number } } }
-  | { type: "hazard.resolved"; payload: HazardRollResult }
+  | { type: "hazard.resolved"; payload: HazardRollResult & { playerId: string } }
   | { type: "player.died"; payload: { playerId: string; reviveFeeDrift: number; reviveCount: number } }
   | { type: "player.revived"; payload: { playerId: string; reviveCount: number } }
   | { type: "artifact.looted"; payload: EquippedArtifact & { playerId: string } }
   | { type: "odds_pool.opened"; payload: OddsPoolView }
   | { type: "odds_pool.resolved"; payload: OddsPoolView }
-  | { type: "journey.ended"; payload: JourneyResultPayload };
+  | { type: "journey.ended"; payload: JourneyResultPayload & { playerId: string } }
+  | { type: "room.created"; payload: GameRoom }
+  | { type: "room.player_joined"; payload: { roomId: string; player: RoomPlayer } }
+  | { type: "room.player_left"; payload: { roomId: string; playerId: string } }
+  | { type: "room.started"; payload: { roomId: string; journeySeed: JourneySeed } }
+  | { type: "room.ended"; payload: { roomId: string } }
+  | { type: "player.ready"; payload: { playerId: string; ready: boolean } }
+  | { type: "player.advance"; payload: { playerId: string; zoneIndex: number; status: JourneyStatus } }
+  | { type: "lobby.players"; payload: { count: number; players: Array<{ playerId: string; displayName: string }> } };

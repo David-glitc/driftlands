@@ -24,7 +24,7 @@ export function WalletBar({ playerId, onPlayerId }: Props) {
             Playing as <strong>{truncated}</strong>
           </span>
         ) : (
-          <span>Connect a Solana wallet (Atomic Dynamic env) or play as guest.</span>
+          <span>Connect your wallet to play, or continue as a guest below.</span>
         )}
       </div>
       {!connected && null}

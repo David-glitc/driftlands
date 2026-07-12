@@ -11,9 +11,10 @@ type Props = {
   reviveCount: number;
   busy: boolean;
   onRevive: () => void;
+  itemBonus?: number | null;
 };
 
-export function DeathModal({ fee, reviveCount, busy, onRevive }: Props) {
+export function DeathModal({ fee, reviveCount, busy, onRevive, itemBonus = null }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -29,6 +30,9 @@ export function DeathModal({ fee, reviveCount, busy, onRevive }: Props) {
     { scope: rootRef },
   );
 
+  const bonusPct =
+    itemBonus != null && itemBonus > 0 ? Math.round(itemBonus * 100) : null;
+
   return (
     <div ref={rootRef} style={styles.backdrop}>
       <div className="dl-death-panel" style={styles.panel} role="dialog" aria-labelledby="death-title">
@@ -39,6 +43,9 @@ export function DeathModal({ fee, reviveCount, busy, onRevive }: Props) {
           Revive #{reviveCount + 1} of 3
           {fee != null ? ` · ${fee} $DRIFT` : " · cap reached"}
         </p>
+        {bonusPct != null && (
+          <p style={styles.hint}>Fragments bought you +{bonusPct}% on this roll.</p>
+        )}
         <button type="button" disabled={busy || fee == null} style={styles.btn} onClick={onRevive}>
           {busy ? "Paying…" : fee == null ? "No revives left" : `Pay ${fee} $DRIFT (demo)`}
         </button>
@@ -68,7 +75,8 @@ const styles: Record<string, React.CSSProperties> = {
     willChange: "transform, opacity",
   },
   title: { margin: "0 0 8px", fontFamily: '"Space Grotesk", sans-serif', fontSize: 28 },
-  body: { margin: "0 0 18px", color: "#3d4466", fontWeight: 600 },
+  body: { margin: "0 0 10px", color: "#3d4466", fontWeight: 600 },
+  hint: { margin: "0 0 18px", color: "#1b7a52", fontWeight: 700, fontSize: 13 },
   btn: {
     width: "100%",
     border: "3px solid #1b1f3b",

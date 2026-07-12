@@ -54,3 +54,15 @@ body {
 .dl-wallet {
   min-height: 40px;
 }
+
+@media (max-width: 860px) {
+  .dl-landing-hero {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+    padding-top: 88px !important;
+  }
+  .dl-hero-art {
+    order: -1;
+    width: min(72vw, 280px) !important;
+  }
+}

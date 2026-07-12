@@ -2,7 +2,7 @@ import { BalancingConfigSchema } from "../schemas.js";
 
 /** V1 balancing — tunable without redeploying game logic. */
 export const BALANCING_RAW = {
-  config_version: "balancing-v1.0.0",
+  config_version: "balancing-v1.1.0",
   revive: {
     base_fee_drift: 1,
     multipliers: [1, 2.5, 6],
@@ -26,6 +26,14 @@ export const BALANCING_RAW = {
     survive_bonus: 25,
     death_penalty: -10,
     daily_decay: 0.02,
+  },
+  artifacts: {
+    max_item_bonus: 0.55,
+    weight_soft_cap: 40,
+    weight_penalty_per_point: 0.002,
+    max_weight_penalty: 0.08,
+    vitality_to_bonus: 0.0008,
+    focus_to_bonus: 0.0012,
   },
   stake_assets: [
     {
@@ -54,4 +62,4 @@ export const BALANCING_RAW = {
 
 export const BALANCING = BalancingConfigSchema.parse(BALANCING_RAW);
 
-export const GAME_CONFIG_VERSION = `${BALANCING.config_version}+artifacts-v1.0.0`;
+export const GAME_CONFIG_VERSION = `${BALANCING.config_version}+artifacts-v1.1.0`;

@@ -1,16 +1,16 @@
 import { createHash, createHmac, randomInt } from "node:crypto";
 import { nanoid } from "nanoid";
 import {
-  ARTIFACT_DEFINITIONS,
   BALANCING,
   GAME_CONFIG_VERSION,
   canRevive,
+  catalogSnapshot as artifactCatalogSnapshot,
   computeSurvivalChance,
+  effectiveSurvivalBonus,
   generateJourney,
   getArtifactById,
   reviveFeeFor,
   rollArtifactDrop,
-  sumItemBonus,
   type EquippedArtifact,
   type HazardRollResult,
   type JourneyResultPayload,
@@ -76,7 +76,13 @@ export function startJourney(params: {
     reputation: params.reputation ?? 0,
     zoneIndex: 0,
     hp: 100,
-    inventory: [],
+    inventory: [
+      {
+        artifactId: "armor_sunweave",
+        instanceId: `starter_${journeyId}`,
+        acquiredAtZone: 0,
+      },
+    ],
     reviveCount: 0,
     status: "active",
   };
@@ -99,7 +105,7 @@ export function resolveCurrentNode(journeyId: string): {
   const node = active.seed.nodes[active.session.zoneIndex];
   if (!node) throw new Error("No node at current zone");
 
-  const itemBonus = sumItemBonus(active.session.inventory, node.kind);
+  const itemBonus = effectiveSurvivalBonus(active.session.inventory, node.kind);
   const survivalChance = computeSurvivalChance({
     levelScore: active.session.levelScore,
     itemBonus,
@@ -156,13 +162,16 @@ export function resolveCurrentNode(journeyId: string): {
     active.session.zoneIndex = active.seed.nodes.length - 1;
     active.session.status = "survived";
     const ended = buildResult(active, true);
-    const event: RealtimeEvent = { type: "journey.ended", payload: ended };
+    const event: RealtimeEvent = { type: "journey.ended", payload: { ...ended, playerId: ended.player } };
     return { result, session: active.session, event, ended };
   }
 
   active.session.zoneIndex = nextIndex;
-  const event: RealtimeEvent = { type: "hazard.resolved", payload: result };
-  return { result, session: active.session, event };
+    const event: RealtimeEvent = {
+      type: "hazard.resolved",
+      payload: { ...result, playerId: active.session.playerId },
+    };
+    return { result, session: active.session, event };
 }
 
 export function currentReviveFee(active: ActiveJourney): number {
@@ -238,8 +247,15 @@ export function buildResult(active: ActiveJourney, survived: boolean): JourneyRe
 }
 
 export function signJourneyResult(payload: JourneyResultPayload): string {
-  const secret = process.env.JOURNEY_SIGNING_SECRET ?? "dev-only-change-me";
-  return createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+  const secret = process.env.JOURNEY_SIGNING_SECRET;
+  if (!secret) {
+    if (process.env.DEMO_MODE === "true") {
+      console.warn("[driftlands] JOURNEY_SIGNING_SECRET not set — using unsafe default (demo mode OK)");
+    } else {
+      throw new Error("JOURNEY_SIGNING_SECRET is required in production mode");
+    }
+  }
+  return createHmac("sha256", secret ?? "driftlands-dev-ed25519-change-in-prod").update(JSON.stringify(payload)).digest("hex");
 }
 
 export function openOddsPool(journeyId: string, nodeId: string): OddsPoolView {
@@ -298,9 +314,11 @@ export function resolveOddsPool(poolId: string, survived: boolean): OddsPoolView
 }
 
 export function catalogSnapshot() {
+  const snap = artifactCatalogSnapshot();
   return {
     configVersion: GAME_CONFIG_VERSION,
-    artifacts: ARTIFACT_DEFINITIONS,
+    artifactConfigVersion: snap.configVersion,
+    artifacts: snap.artifacts,
     balancing: BALANCING,
   };
 }

@@ -16,6 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/shared/node_modules ./shared/node_modules
 COPY --from=deps /app/client/node_modules ./client/node_modules
 COPY . .
+RUN mkdir -p /app/client/public
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
@@ -34,7 +35,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-RUN groupadd -r nodejs && useradd -r -g nodejs nextjs
+RUN groupadd -r nodejs && useradd -r -g nodejs nextjs \
+  && mkdir -p ./client/public
 COPY --from=builder /app/client/public ./client/public
 COPY --from=builder --chown=nextjs:nodejs /app/client/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/client/.next/static ./client/.next/static

@@ -4,6 +4,8 @@ import type {
   OddsPoolView,
   PlayerSession,
   HazardRollResult,
+  GameRoom,
+  RoomPlayer,
 } from "@driftlands/shared";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -61,5 +63,47 @@ export const api = {
     return request<{
       entries: Array<{ playerId: string; reputation: number; journeysWon: number; displayName?: string }>;
     }>("/leaderboard");
+  },
+
+  /* ── Rooms ── */
+
+  listRooms() {
+    return request<{ rooms: GameRoom[] }>("/rooms");
+  },
+
+  createRoom(body: { playerId: string; displayName: string; name: string; maxPlayers?: number; difficulty?: string }) {
+    return request<{ room: GameRoom }>("/rooms", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  getRoom(id: string) {
+    return request<{ room: GameRoom }>(`/rooms/${id}`);
+  },
+
+  joinRoom(roomId: string, body: { playerId: string; displayName: string }) {
+    return request<{ room: GameRoom }>(`/rooms/${roomId}/join`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  leaveRoom(roomId: string, body: { playerId: string }) {
+    return request<{ room: GameRoom }>(`/rooms/${roomId}/leave`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  setReady(roomId: string, body: { playerId: string; ready: boolean }) {
+    return request<{ room: GameRoom }>(`/rooms/${roomId}/ready`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  startRoom(roomId: string, body: { playerId: string }) {
+    return request<{ room: GameRoom; journeySeed: JourneySeed }>(`/rooms/${roomId}/start`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  advanceRoom(roomId: string, body: { playerId: string }) {
+    return request<{
+      player: RoomPlayer;
+      room: GameRoom;
+      ended: boolean;
+    }>(`/rooms/${roomId}/advance`, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  reviveRoom(roomId: string, body: { playerId: string }) {
+    return request<{ player: RoomPlayer }>(`/rooms/${roomId}/revive`, { method: "POST", body: JSON.stringify(body) });
   },
 };

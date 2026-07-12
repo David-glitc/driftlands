@@ -16,8 +16,27 @@ import {
 import { persistJourneyEnd, persistJourneyStart, topLeaderboard, ensurePlayer } from "./db.js";
 import { realtime } from "./realtime.js";
 import { cache } from "./cache.js";
+import {
+  createRoom,
+  joinRoom,
+  leaveRoom,
+  listRooms,
+  getRoom,
+  setReady,
+  startRoomJourney,
+  advanceRoomPlayer,
+  reviveRoomPlayer,
+} from "./engine/roomEngine.js";
 
 export const api: ExpressRouter = Router();
+
+const VALID_PLAYER_ID = /^[a-zA-Z0-9_.@-]{1,64}$/;
+
+function parsePlayerId(raw: unknown): string {
+  const id = String(raw ?? "demo_wanderer").trim();
+  if (!VALID_PLAYER_ID.test(id)) throw new Error("Invalid playerId");
+  return id;
+}
 
 api.get("/health", (_req, res) => {
   res.json({ ok: true, service: "driftlands-server", demo: process.env.DEMO_MODE === "true" });
@@ -29,7 +48,7 @@ api.get("/catalog", (_req, res) => {
 
 api.post("/journeys", async (req, res) => {
   try {
-    const playerId = String(req.body.playerId ?? "demo_wanderer");
+    const playerId = parsePlayerId(req.body.playerId);
     const difficulty = req.body.difficulty as "easy" | "standard" | "hard" | undefined;
     const levelScore = Number(req.body.levelScore ?? 12);
 
@@ -115,11 +134,11 @@ api.post("/journeys/:id/revive", async (req, res) => {
     await realtime.publish(req.params.id, event);
     res.json({ session, fee, note: demoPaid ? "demo revive — no on-chain tx" : "on-chain verified" });
   } catch (err) {
-    const active = getActiveJourney(req.params.id);
-    if (active?.session.status === "awaiting_revive") {
-      try {
-        // Cap reached → permadeath
-        const ended = abandonJourney(req.params.id);
+    const msg = err instanceof Error ? err.message : "failed";
+    if (msg.includes("Revive cap reached")) {
+      const active = getActiveJourney(req.params.id);
+      if (active && active.session.status === "permadeath") {
+        const ended = buildResult(active, false);
         const signature = signJourneyResult(ended);
         await persistJourneyEnd({
           journeyId: ended.journeyId,
@@ -131,13 +150,11 @@ api.post("/journeys/:id/revive", async (req, res) => {
           reputationDelta: ended.reputationDelta,
           playerId: ended.player,
         });
-        res.status(400).json({ error: err instanceof Error ? err.message : "failed", ended, signature });
+        res.status(400).json({ error: msg, ended, signature });
         return;
-      } catch {
-        /* fall through */
       }
     }
-    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+    res.status(400).json({ error: msg });
   }
 });
 
@@ -160,7 +177,7 @@ api.post("/journeys/:id/abandon", async (req, res) => {
       reputationDelta: ended.reputationDelta,
       playerId: ended.player,
     });
-    await realtime.publish(req.params.id, { type: "journey.ended", payload: ended });
+    await realtime.publish(req.params.id, { type: "journey.ended", payload: { ...ended, playerId: ended.player } });
     res.json({ ended, signature });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
@@ -195,7 +212,7 @@ api.post("/pools/:poolId/resolve", async (req, res) => {
 api.get("/leaderboard", async (_req, res) => {
   const rows = await topLeaderboard(25);
   res.json({
-    entries: rows.map((r) => ({
+    entries: rows.map((r: { playerId: string; player: { displayName: string | null }; reputation: number; journeysWon: number }) => ({
       playerId: r.playerId,
       displayName: r.player.displayName,
       reputation: r.reputation,
@@ -217,4 +234,96 @@ api.get("/journeys/:id/attestation", (req, res) => {
   }
   const payload = buildResult(active, active.session.status === "survived");
   res.json({ payload, signature: signJourneyResult(payload) });
+});
+
+/* ── Game Rooms (multiplayer) ── */
+
+api.get("/rooms", (_req, res) => {
+  res.json({ rooms: listRooms() });
+});
+
+api.post("/rooms", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const room = createRoom({
+      name: String(req.body.name ?? "Drift").slice(0, 48),
+      hostId: playerId,
+      hostName: String(req.body.displayName ?? playerId).slice(0, 32),
+      maxPlayers: Math.min(8, Math.max(2, Number(req.body.maxPlayers) || 4)),
+      difficulty: (["easy", "standard", "hard"].includes(req.body.difficulty) ? req.body.difficulty : "standard") as "easy" | "standard" | "hard",
+    });
+    res.status(201).json({ room });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.get("/rooms/:id", (req, res) => {
+  const room = getRoom(req.params.id);
+  if (!room) {
+    res.status(404).json({ error: "room not found" });
+    return;
+  }
+  res.json({ room });
+});
+
+api.post("/rooms/:id/join", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const displayName = String(req.body.displayName ?? playerId).slice(0, 32);
+    const room = joinRoom(req.params.id, playerId, displayName);
+    res.json({ room });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.post("/rooms/:id/leave", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const room = leaveRoom(req.params.id, playerId);
+    res.json({ room });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.post("/rooms/:id/ready", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const room = setReady(req.params.id, playerId, Boolean(req.body.ready));
+    res.json({ room });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.post("/rooms/:id/start", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const { room, journeySeed } = startRoomJourney(req.params.id, playerId);
+    res.json({ room, journeySeed });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.post("/rooms/:id/advance", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const result = advanceRoomPlayer(req.params.id, playerId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
+api.post("/rooms/:id/revive", (req, res) => {
+  try {
+    const playerId = parsePlayerId(req.body.playerId);
+    const player = reviveRoomPlayer(req.params.id, playerId);
+    res.json({ player });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "failed" });
+  }
 });

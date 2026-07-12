@@ -31,6 +31,13 @@ export const ArtifactDefinitionSchema = z.object({
   flavor_text: z.string(),
   display_name: z.string(),
   color: z.string().optional(),
+  stats: z.object({
+    power: z.number().min(0).max(100),
+    vitality: z.number().min(0).max(100),
+    focus: z.number().min(0).max(100),
+    luck: z.number().min(0).max(100),
+    weight: z.number().min(0).max(100),
+  }),
 });
 
 export const ArtifactCatalogSchema = z.object({
@@ -71,6 +78,14 @@ export const BalancingConfigSchema = z.object({
     survive_bonus: z.number(),
     death_penalty: z.number(),
     daily_decay: z.number().min(0).max(1),
+  }),
+  artifacts: z.object({
+    max_item_bonus: z.number().positive(),
+    weight_soft_cap: z.number().positive(),
+    weight_penalty_per_point: z.number().nonnegative(),
+    max_weight_penalty: z.number().nonnegative(),
+    vitality_to_bonus: z.number().nonnegative(),
+    focus_to_bonus: z.number().nonnegative(),
   }),
   stake_assets: z.array(StakeAssetSchema).min(1),
 });

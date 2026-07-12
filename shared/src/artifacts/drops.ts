@@ -33,8 +33,8 @@ export function rollArtifactDrop(
   if (eligible.length === 0) return undefined;
 
   const rand = mulberry32(seed);
-  // ~55% chance of any drop at a cache/hazard resolve
-  if (rand() > 0.55) return undefined;
+  // ~72% chance of any drop at a cache/hazard resolve (readable loot UX)
+  if (rand() > 0.72) return undefined;
 
   const totalWeight = eligible.reduce((s, a) => s + a.dropWeight, 0);
   let pick = rand() * totalWeight;

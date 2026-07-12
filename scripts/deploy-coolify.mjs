@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Deploy Driftlands to Coolify on chessonchain.online (same API as ChessOnChain / hitmeup).
+ * Deploy Driftlands to Coolify.
  *
  * Token sources (first match):
  *   1. COOLIFY_TOKEN env
- *   2. ~/.config/chessonchain/coolify.env
+ *   2. ~/.config/driftlands/coolify.env
  *   3. ./scripts/.coolify.env (local, gitignored)
  *
  * Usage:
@@ -25,14 +25,16 @@ const COOLIFY_URL = (process.env.COOLIFY_URL ?? "https://coolify.chessonchain.on
 const PROJECT_UUID = process.env.COOLIFY_PERSONAL_PROJECT_UUID ?? "qak4ll4915b0ri9gj8a57ztu";
 const SERVER_UUID = process.env.COOLIFY_SERVER_UUID ?? "goyjivzepwvgk2egci5nms3i";
 const SERVICE_NAME = process.env.DRIFTLANDS_COOLIFY_NAME ?? "driftlands";
-const PUBLIC_WEB = process.env.DRIFTLANDS_PUBLIC_URL ?? "https://driftlands.chessonchain.online";
-const PUBLIC_API = process.env.DRIFTLANDS_API_URL ?? "https://api.driftlands.chessonchain.online";
+const PUBLIC_WEB = process.env.DRIFTLANDS_PUBLIC_URL ?? "https://driftlands.kierkegaard.space";
+/** Single-level subdomain — Cloudflare free Universal SSL does not cover api.driftlands.* */
+const PUBLIC_API = process.env.DRIFTLANDS_API_URL ?? "https://driftlands-api.kierkegaard.space";
 const VPS_IP = process.env.CLOUDFLARE_DEFAULT_IP ?? "109.205.181.119";
+const SERVICE_UUID = process.env.DRIFTLANDS_SERVICE_UUID ?? "pjs273bfq41mp9zcq2e714ki";
 
 function loadToken() {
   if (process.env.COOLIFY_TOKEN?.trim()) return process.env.COOLIFY_TOKEN.trim();
   const candidates = [
-    join(homedir(), ".config/chessonchain/coolify.env"),
+    join(homedir(), ".config/driftlands/coolify.env"),
     join(root, "scripts/.coolify.env"),
     join(root, ".env.local"),
   ];
@@ -43,7 +45,7 @@ function loadToken() {
     if (m) return m[1].trim().replace(/^["']|["']$/g, "");
   }
   throw new Error(
-    "COOLIFY_TOKEN missing. Put it in ~/.config/chessonchain/coolify.env or export COOLIFY_TOKEN=...",
+    "COOLIFY_TOKEN missing. Put it in ~/.config/driftlands/coolify.env or export COOLIFY_TOKEN=...",
   );
 }
 
@@ -69,9 +71,15 @@ async function coolify(path, opts = {}) {
 }
 
 function encodeCompose() {
-  let raw = readFileSync(join(root, "docker-compose.yml"), "utf8");
+  const coolifyCompose = join(root, "docker-compose.coolify.yml");
+  let raw = existsSync(coolifyCompose)
+    ? readFileSync(coolifyCompose, "utf8")
+    : readFileSync(join(root, "docker-compose.yml"), "utf8");
   const signing = process.env.JOURNEY_SIGNING_SECRET ?? randomBytes(32).toString("hex");
   const replacements = {
+    "https://driftlands.kierkegaard.space": PUBLIC_WEB,
+    "https://driftlands-api.kierkegaard.space": PUBLIC_API,
+    "change-me-in-coolify": signing,
     "${CORS_ORIGIN}": PUBLIC_WEB,
     "${CORS_ORIGIN:-}": PUBLIC_WEB,
     "${NEXT_PUBLIC_API_URL}": PUBLIC_API,
@@ -112,22 +120,36 @@ async function listAll() {
 
 function printDns() {
   console.log(`
-Add Cloudflare DNS (zone chessonchain.online) → ${VPS_IP} (proxied):
+Add Cloudflare DNS (zone kierkegaard.space) → ${VPS_IP} (proxied):
   A   driftlands       ${VPS_IP}
-  A   api.driftlands   ${VPS_IP}
+  A   driftlands-api   ${VPS_IP}
+  # avoid api.driftlands — multi-level subdomain breaks Cloudflare free Universal SSL
 `);
 }
 
 async function deploy() {
   const list = await coolify("/services");
   const existing = (list ?? []).find(
-    (s) => s.name === SERVICE_NAME || String(s.name ?? "").includes("driftlands"),
+    (s) =>
+      s.uuid === SERVICE_UUID ||
+      s.name === SERVICE_NAME ||
+      String(s.name ?? "").includes("driftlands"),
   );
 
   if (existing) {
-    console.log(`Service exists: ${existing.uuid} — starting`);
-    await coolify(`/services/${existing.uuid}/start`, { method: "POST", body: "{}" }).catch(() =>
-      coolify(`/services/${existing.uuid}/restart`, { method: "POST", body: "{}" }),
+    console.log(`Service exists: ${existing.uuid} — patching compose + restart`);
+    await coolify(`/services/${existing.uuid}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        docker_compose_raw: encodeCompose(),
+        urls: [
+          { name: "client", url: PUBLIC_WEB },
+          { name: "server", url: PUBLIC_API },
+        ],
+      }),
+    });
+    await coolify(`/services/${existing.uuid}/restart`, { method: "POST", body: "{}" }).catch(() =>
+      coolify(`/services/${existing.uuid}/start`, { method: "POST", body: "{}" }),
     );
     return existing.uuid;
   }
@@ -141,6 +163,10 @@ async function deploy() {
     destination_uuid: "0",
     instant_deploy: true,
     docker_compose_raw: encodeCompose(),
+    urls: [
+      { name: "client", url: PUBLIC_WEB },
+      { name: "server", url: PUBLIC_API },
+    ],
   };
 
   const created = await coolify("/services", { method: "POST", body: JSON.stringify(body) });

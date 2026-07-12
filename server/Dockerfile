@@ -34,6 +34,7 @@ ENV DATABASE_URL=file:/data/driftlands.db
 ENV DEMO_MODE=true
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/server/node_modules ./server/node_modules
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/server/prisma ./server/prisma
 COPY --from=builder /app/server/package.json ./server/package.json
@@ -43,4 +44,4 @@ USER drift
 EXPOSE 4000
 HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \
   CMD wget -qO- http://127.0.0.1:4000/api/health || exit 1
-CMD ["sh", "-c", "../node_modules/.bin/prisma db push --skip-generate && node dist/index.js"]
+CMD ["sh", "-c", "../node_modules/.pnpm/node_modules/.bin/prisma db push --skip-generate && node dist/index.js"]

@@ -42,13 +42,4 @@ model LeaderboardEntry {
   updatedAt  DateTime @updatedAt
 }
 
-model OddsPoolRecord {
-  id           String   @id
-  journeyId    String
-  nodeId       String
-  outcomesJson String
-  feeBps       Int
-  resolved     Boolean  @default(false)
-  winningOutcomeId String?
-  createdAt    DateTime @default(now())
-}
+

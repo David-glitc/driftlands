@@ -21,13 +21,14 @@ Status: Done
 - Signed journey result hashes for on-chain attestation handoff.
 
 ## Phase 3 — Three.js / R3F client
-Status: In progress
-- Landing + HUD + death/odds/result UI with GSAP motion; coral-dunes Canvas scene.
-- Next: wire wallet adapter + deploy.
+Status: Done
+- Artifact belt + inventory HUD, procedural ArtifactMesh / InstancedPickups, EquippedGear on wanderer; multi-stat loadouts via shared catalog.
+- Survival uses effectiveSurvivalBonus; DOM overlays (no blur); Wayfarer fragment copy on landing/death.
 
 ## Phase 4 — Wallet + Sanctum + deploy
-Status: Pending
-- Solana wallet adapter, demo stake UI, Vercel/Fly deploy targets.
+Status: Done
+- Dynamic Solana wallet bar + DemoStakePanel (DRIFT / INF / jitoSOL multipliers) feeding Level Score into journey start; localStorage demo stake.
+- Coolify primary deploy; Vercel (client) + Fly (server) notes in COOLIFY.md. Live Sanctum stake txs remain a hook.
 
 ## Phase 5 — Odds pool polish + token launch prep
 Status: Pending

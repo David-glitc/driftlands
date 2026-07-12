@@ -11,12 +11,18 @@ import {
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { EquippedArtifact, JourneyNode, JourneyStatus } from "@driftlands/shared";
+import { EquippedGear, WorldArtifactProps, ActiveLootBurst } from "@/components/artifacts";
+import type { GraphicsQuality } from "@/lib/settings";
 
 type Props = {
   nodes: JourneyNode[];
   zoneIndex: number;
   status: JourneyStatus;
   inventory: EquippedArtifact[];
+  latestDropId?: string | null;
+  graphicsQuality?: GraphicsQuality;
+  reducedMotion?: boolean;
+  cameraShake?: boolean;
 };
 
 const HAZARD: Record<string, { color: string; emissive: string }> = {
@@ -61,13 +67,27 @@ function makeSandTexture() {
 }
 
 /** Cinematic desert journey — textured dunes, filmic light, third-person chase cam. */
-export function JourneyCanvas({ nodes, zoneIndex, status }: Props) {
+export function JourneyCanvas({
+  nodes,
+  zoneIndex,
+  status,
+  inventory,
+  latestDropId = null,
+  graphicsQuality = "high",
+  reducedMotion = false,
+  cameraShake = true,
+}: Props) {
+  const dpr: [number, number] =
+    graphicsQuality === "low" ? [1, 1] : graphicsQuality === "medium" ? [1, 1.5] : [1, 2];
+  const starCount = graphicsQuality === "low" ? 400 : graphicsQuality === "medium" ? 1200 : 2200;
+  const shadowMap = graphicsQuality === "low" ? 1024 : 2048;
+
   return (
     <Canvas
-      shadows
-      dpr={[1, 2]}
+      shadows={graphicsQuality !== "low"}
+      dpr={dpr}
       gl={{
-        antialias: true,
+        antialias: graphicsQuality !== "low",
         powerPreference: "high-performance",
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
@@ -80,11 +100,11 @@ export function JourneyCanvas({ nodes, zoneIndex, status }: Props) {
       <ambientLight intensity={0.28} />
       <hemisphereLight args={["#d7efff", "#c4a574", 0.65]} />
       <directionalLight
-        castShadow
+        castShadow={graphicsQuality !== "low"}
         position={[30, 40, 18]}
         intensity={2.6}
         color="#fff3d6"
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowMap, shadowMap]}
         shadow-camera-far={140}
         shadow-camera-left={-50}
         shadow-camera-right={50}
@@ -93,17 +113,27 @@ export function JourneyCanvas({ nodes, zoneIndex, status }: Props) {
         shadow-bias={-0.00015}
       />
       <Sky sunPosition={[100, 40, 50]} turbidity={3.2} rayleigh={0.85} mieCoefficient={0.004} mieDirectionalG={0.9} />
-      <Stars radius={140} depth={50} count={2200} factor={2} saturation={0.15} fade speed={0.25} />
-      <Environment preset="sunset" />
+      <Stars radius={140} depth={50} count={starCount} factor={2} saturation={0.15} fade speed={reducedMotion ? 0 : 0.25} />
+      {graphicsQuality === "high" && <Environment preset="sunset" />}
 
       <DesertTerrain length={nodes.length} />
       <PathRibbon nodes={nodes} />
       <RockField nodes={nodes} />
       <DistantMesas />
       <HazardLandmarks nodes={nodes} zoneIndex={zoneIndex} />
-      <Wanderer zoneIndex={zoneIndex} status={status} nodes={nodes} />
-      <ContactShadows position={[0, 0.02, 0]} opacity={0.55} scale={90} blur={2.8} far={22} />
-      <ChaseCamera zoneIndex={zoneIndex} nodes={nodes} status={status} />
+      <WorldArtifactProps nodes={nodes} inventory={inventory} zoneIndex={zoneIndex} />
+      <ActiveLootBurst artifactId={latestDropId} zoneIndex={zoneIndex} nodes={nodes} />
+      <Wanderer zoneIndex={zoneIndex} status={status} nodes={nodes} inventory={inventory} />
+      {graphicsQuality !== "low" && (
+        <ContactShadows position={[0, 0.02, 0]} opacity={0.55} scale={90} blur={2.8} far={22} />
+      )}
+      <ChaseCamera
+        zoneIndex={zoneIndex}
+        nodes={nodes}
+        status={status}
+        reducedMotion={reducedMotion}
+        cameraShake={cameraShake}
+      />
     </Canvas>
   );
 }
@@ -112,10 +142,14 @@ function ChaseCamera({
   zoneIndex,
   nodes,
   status,
+  reducedMotion = false,
+  cameraShake = true,
 }: {
   zoneIndex: number;
   nodes: JourneyNode[];
   status: JourneyStatus;
+  reducedMotion?: boolean;
+  cameraShake?: boolean;
 }) {
   const { camera } = useThree();
   const look = useRef(new THREE.Vector3());
@@ -130,15 +164,16 @@ function ChaseCamera({
     const nz = (next?.position.z ?? pz) + 0.01;
     const dir = new THREE.Vector3(nx - px, 0, nz - pz).normalize();
     const dead = status === "awaiting_revive";
+    const ease = reducedMotion ? 8 : 2.4;
+    const shake = !reducedMotion && cameraShake && !dead ? Math.sin(performance.now() * 0.0015) * 0.08 : 0;
 
-    // Third-person behind the wanderer, looking down the path
     target.current.set(
-      px - dir.x * 11 + dir.z * 2.2,
+      px - dir.x * 11 + dir.z * 2.2 + shake,
       dead ? 4.2 : 5.8,
       pz - dir.z * 11 - dir.x * 2.2,
     );
-    camera.position.lerp(target.current, 1 - Math.exp(-2.4 * dt));
-    look.current.lerp(new THREE.Vector3(px + dir.x * 6, 1.2, pz + dir.z * 6), 1 - Math.exp(-3 * dt));
+    camera.position.lerp(target.current, 1 - Math.exp(-ease * dt));
+    look.current.lerp(new THREE.Vector3(px + dir.x * 6, 1.2, pz + dir.z * 6), 1 - Math.exp(-(ease + 0.6) * dt));
     camera.lookAt(look.current);
   });
   return null;
@@ -316,10 +351,12 @@ function Wanderer({
   zoneIndex,
   status,
   nodes,
+  inventory,
 }: {
   zoneIndex: number;
   status: JourneyStatus;
   nodes: JourneyNode[];
+  inventory: EquippedArtifact[];
 }) {
   const group = useRef<THREE.Group>(null);
   const bob = useRef(0);
@@ -376,6 +413,7 @@ function Wanderer({
         <capsuleGeometry args={[0.08, 0.25, 4, 8]} />
         <meshStandardMaterial color="#1c2433" roughness={0.7} />
       </mesh>
+      <EquippedGear inventory={inventory} />
     </group>
   );
 }
