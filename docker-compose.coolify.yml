@@ -1,15 +1,18 @@
-# Pre-built images for Coolify empty-compose deploys (build on VPS first).
-#   docker build -f server/Dockerfile -t driftlands-server:latest .
-#   docker build -f client/Dockerfile -t driftlands-client:latest \
+# Pre-built images pushed to GHCR from local build.
+# Build & push locally:
+#   docker build -f server/Dockerfile -t ghcr.io/david-glitc/driftlands-server:latest .
+#   docker build -f client/Dockerfile -t ghcr.io/david-glitc/driftlands-client:latest \
 #     --build-arg NEXT_PUBLIC_API_URL=https://driftlands-api.kierkegaard.space \
 #     --build-arg NEXT_PUBLIC_WS_URL=wss://driftlands-api.kierkegaard.space/ws \
 #     --build-arg NEXT_PUBLIC_DEMO_MODE=true \
 #     --build-arg NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=d388d3b0-2620-4ef0-8c09-3ace6d0ebbf6 \
 #     .
+#   docker push ghcr.io/david-glitc/driftlands-server:latest
+#   docker push ghcr.io/david-glitc/driftlands-client:latest
 
 services:
   server:
-    image: driftlands-server:latest
+    image: ghcr.io/david-glitc/driftlands-server:latest
     restart: unless-stopped
     environment:
       PORT: "4000"
@@ -31,7 +34,7 @@ services:
       start_period: 40s
 
   client:
-    image: driftlands-client:latest
+    image: ghcr.io/david-glitc/driftlands-client:latest
     restart: unless-stopped
     depends_on:
       server:

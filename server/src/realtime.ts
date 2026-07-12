@@ -106,6 +106,19 @@ export class RealtimeHub {
       }
     }
   }
+
+  close(): void {
+    for (const client of this.clients) {
+      try {
+        client.ws.close(1001, "server shutting down");
+      } catch {
+        /* ignore */
+      }
+    }
+    this.clients.clear();
+    this.wss?.close();
+    console.log("[driftlands] realtime hub closed");
+  }
 }
 
 export const realtime = new RealtimeHub();
