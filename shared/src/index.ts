@@ -9,3 +9,4 @@ export * from "./revive.js";
 export * from "./artifacts/index.js";
 export * from "./config/index.js";
 export * from "./palette.js";
+export * from "./story.js";

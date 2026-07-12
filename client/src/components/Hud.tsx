@@ -1,9 +1,10 @@
 "use client";
 
-import type { JourneyNode, PlayerSession } from "@driftlands/shared";
+import type { JourneyNode, PlayerSession, ResourceWallet } from "@driftlands/shared";
 import { sumInventoryStats } from "@driftlands/shared";
 import { ArtifactBelt } from "@/components/ArtifactBelt";
 import { InventoryPanel } from "@/components/InventoryPanel";
+import { ResourceBar } from "@/components/ResourceBar";
 
 type Props = {
   session: PlayerSession;
@@ -16,6 +17,7 @@ type Props = {
   inventoryOpen: boolean;
   onInventoryOpenChange: (open: boolean) => void;
   showHotkeyHints?: boolean;
+  wallet?: ResourceWallet;
 };
 
 export function Hud({
@@ -28,7 +30,8 @@ export function Hud({
   onAdvance,
   inventoryOpen,
   onInventoryOpenChange,
-  showHotkeyHints = true,
+  showHotkeyHints,
+  wallet,
 }: Props) {
   const progress = Math.min(100, ((session.zoneIndex + 1) / Math.max(1, totalNodes)) * 100);
   const stats = sumInventoryStats(session.inventory);
@@ -65,6 +68,11 @@ export function Hud({
       </div>
 
       <div style={styles.bottom}>
+        {wallet && (
+          <div style={styles.resourceRow}>
+            <ResourceBar wallet={wallet} />
+          </div>
+        )}
         <div style={styles.panel}>
           <p style={styles.nodeTitle}>{currentNode?.label ?? "Open dunes"}</p>
           <p style={styles.nodeMeta}>
@@ -188,5 +196,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     boxShadow: "0 12px 32px rgba(232, 74, 47, 0.45)",
     whiteSpace: "nowrap",
+  },
+  resourceRow: {
+    marginBottom: 8,
   },
 };

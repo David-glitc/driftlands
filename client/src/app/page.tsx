@@ -21,7 +21,10 @@ import { RoomPanel } from "@/components/RoomPanel";
 import { TokenSidebar } from "@/components/TokenSidebar";
 import { SwapModal } from "@/components/SwapModal";
 import { Dashboard } from "@/components/Dashboard";
+import { DialoguePanel } from "@/components/DialoguePanel";
 import { useRealtime } from "@/lib/realtime";
+import type { ResourceWallet, DialogueTree } from "@driftlands/shared";
+import { EMPTY_WALLET, getScriptForNode } from "@driftlands/shared";
 import {
   initAudio,
   playArtifact,
@@ -69,6 +72,8 @@ export default function HomePage() {
   const [swapMint, setSwapMint] = useState(KNOWN_MINTS.SOL);
   const [swapDir, setSwapDir] = useState<"buy" | "sell">("buy");
   const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [wallet, setWallet] = useState<ResourceWallet>({ ...EMPTY_WALLET });
+  const [dialogue, setDialogue] = useState<DialogueTree | null>(null);
 
   useRealtime(roomId ? `room:${roomId}` : "lobby");
 
@@ -157,6 +162,12 @@ export default function HomePage() {
       }
       if (data.result.survived && settings.soundEnabled) {
         playHazard(data.result.levelBonus ?? 0.3);
+      }
+      // Check for script events on this node
+      const currentNode = journey.nodes.find((n) => n.nodeId === data.result.nodeId);
+      if (currentNode) {
+        const script = getScriptForNode(currentNode.kind, data.session.zoneIndex);
+        if (script) setDialogue(script);
       }
       if (data.session.status === "awaiting_revive") {
         const fresh = await api.getJourney(journey.journeyId);
@@ -440,6 +451,7 @@ export default function HomePage() {
           inventoryOpen={inventoryOpen}
           onInventoryOpenChange={setInventoryOpen}
           showHotkeyHints={settings.showHotkeyHints}
+          wallet={wallet}
         />
         {pool && !pool.resolved && session.status === "active" && (
           <OddsPoolPanel pool={pool} onEnter={enterPool} />
@@ -466,6 +478,29 @@ export default function HomePage() {
         />
       )}
       {error && <p style={styles.error}>{error}</p>}
+
+      {dialogue && (
+        <DialoguePanel
+          dialogue={dialogue}
+          onChoice={(lineId, choiceIdx) => {
+            if (choiceIdx < 0) return;
+            try {
+              const line = dialogue.lines[lineId];
+              const choice = line?.choices?.[choiceIdx];
+              if (choice?.effect) {
+                const eff = choice.effect;
+                if (eff.type === "grant_resource") {
+                  const parts = String(eff.value ?? "0").split(":");
+                  const resId = parts[0] ?? "drift_dust";
+                  const amt = parseInt(parts[1] ?? "0", 10);
+                  setWallet((w) => ({ ...w, [resId]: (w[resId as keyof ResourceWallet] ?? 0) + amt }));
+                }
+              }
+            } catch { /* ignore */ }
+          }}
+          onClose={() => setDialogue(null)}
+        />
+      )}
 
       <style jsx global>{`
         .canvas-fallback {
