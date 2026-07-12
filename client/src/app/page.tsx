@@ -7,6 +7,7 @@ import { getArtifactById } from "@driftlands/shared";
 import { api } from "@/lib/api";
 import { loadDemoLevel } from "@/lib/demoStake";
 import { loadSettings, type DriftSettings } from "@/lib/settings";
+import { KNOWN_MINTS } from "@/lib/tokens";
 import { Hud } from "@/components/Hud";
 import { DeathModal } from "@/components/DeathModal";
 import { OddsPoolPanel } from "@/components/OddsPoolPanel";
@@ -17,6 +18,9 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { HotkeysManual } from "@/components/HotkeysManual";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { RoomPanel } from "@/components/RoomPanel";
+import { TokenSidebar } from "@/components/TokenSidebar";
+import { SwapModal } from "@/components/SwapModal";
+import { Dashboard } from "@/components/Dashboard";
 import { useRealtime } from "@/lib/realtime";
 import {
   initAudio,
@@ -61,6 +65,10 @@ export default function HomePage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomReady, setRoomReady] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapMint, setSwapMint] = useState(KNOWN_MINTS.SOL);
+  const [swapDir, setSwapDir] = useState<"buy" | "sell">("buy");
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   useRealtime(roomId ? `room:${roomId}` : "lobby");
 
@@ -331,7 +339,35 @@ export default function HomePage() {
         reputation={session?.reputation ?? 0}
         journeysWon={0}
       />
+      <SwapModal
+        open={swapOpen}
+        onClose={() => setSwapOpen(false)}
+        defaultMint={swapMint}
+        defaultDirection={swapDir}
+        walletAddress={undefined}
+      />
+      <Dashboard
+        open={dashboardOpen}
+        onClose={() => setDashboardOpen(false)}
+        walletAddress={undefined}
+        onSwap={(mint, dir) => {
+          setDashboardOpen(false);
+          setSwapMint(mint);
+          setSwapDir(dir);
+          setSwapOpen(true);
+        }}
+      />
     </>
+  );
+
+  const sidebar = (
+    <TokenSidebar
+      onSwap={(mint, dir) => {
+        setSwapMint(mint);
+        setSwapDir(dir);
+        setSwapOpen(true);
+      }}
+    />
   );
 
   if (!journey || !session) {
@@ -339,6 +375,7 @@ export default function HomePage() {
       return (
         <>
           {dialogs}
+          {sidebar}
           <RoomPanel
             roomId={roomId}
             playerId={playerId}
@@ -352,6 +389,7 @@ export default function HomePage() {
     return (
       <>
         {dialogs}
+        {sidebar}
         <Landing
           playerId={playerId}
           onPlayerId={setPlayerId}
@@ -375,6 +413,7 @@ export default function HomePage() {
   return (
     <main style={styles.shell}>
       {dialogs}
+      {sidebar}
       <button type="button" style={styles.leave} onClick={leaveJourney}>
         Leave
       </button>
