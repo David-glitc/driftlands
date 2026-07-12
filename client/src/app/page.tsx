@@ -37,7 +37,7 @@ import {
   stopAmbient,
 } from "@/lib/audio";
 
-const JourneyCanvas = dynamic(() => import("@/components/JourneyCanvas").then((m) => m.JourneyCanvas), {
+const WorldCanvasEl = dynamic(() => import("@/components/WorldCanvas").then((m) => m.WorldCanvas), {
   ssr: false,
   loading: () => <div className="canvas-fallback">Entering the dunes…</div>,
 });
@@ -74,6 +74,8 @@ export default function HomePage() {
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [wallet, setWallet] = useState<ResourceWallet>({ ...EMPTY_WALLET });
   const [dialogue, setDialogue] = useState<DialogueTree | null>(null);
+  const [playerPos, setPlayerPos] = useState({ x: 0, z: 6 });
+  const [nearbyNodeIdx, setNearbyNodeIdx] = useState<number | null>(null);
 
   useRealtime(roomId ? `room:${roomId}` : "lobby");
 
@@ -231,6 +233,45 @@ export default function HomePage() {
     setRoomReady(true);
   };
 
+  const handleInteract = useCallback(async () => {
+    if (!journey || !session || busy) return;
+    if (session.status !== "active" || end) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api.advance(journey.journeyId);
+      setSession(data.session);
+      if (data.pool) setPool(data.pool);
+      setLastItemBonus(data.result.itemBonus ?? null);
+      const node = journey.nodes.find((n) => n.nodeId === data.result.nodeId);
+      pushLog(data.result.survived
+        ? `Cleared ${node?.label ?? "node"} · ${Math.round(data.result.survivalChance * 100)}%`
+        : `Down at ${node?.label ?? "node"}`);
+      if (data.result.droppedArtifact) {
+        setLatestDropId(data.result.droppedArtifact.artifactId);
+        pushLog(`Found ${getArtifactById(data.result.droppedArtifact.artifactId)?.displayName ?? "a fragment"}`);
+        if (settings.soundEnabled) playArtifact();
+      } else { setLatestDropId(null); }
+      if (data.ended) {
+        setEnd({ survived: data.ended.survived, reputationDelta: data.ended.reputationDelta, resultHash: data.ended.resultHash });
+        if (settings.soundEnabled) { playJourneyEnd(data.ended.survived); stopAmbient(); }
+      }
+      if (data.session.status === "awaiting_revive" && settings.soundEnabled) playDeath();
+      if (data.result.survived && settings.soundEnabled) playHazard(data.result.levelBonus ?? 0.3);
+      const nearby = journey.nodes.find((_, i) => i === (nearbyNodeIdx ?? -1));
+      if (nearby && data.result.survived) {
+        const script = getScriptForNode(nearby.kind, data.session.zoneIndex);
+        if (script) setDialogue(script);
+      }
+      if (data.session.status === "awaiting_revive") {
+        const fresh = await api.getJourney(journey.journeyId);
+        setReviveFee(fresh.reviveFeePreview);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Interact failed");
+    } finally { setBusy(false); }
+  }, [busy, journey, session, end, nearbyNodeIdx, pushLog, settings]);
+
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("dl_player") : null;
     if (stored) setPlayerId(stored);
@@ -251,6 +292,13 @@ export default function HomePage() {
         e.preventDefault();
         setProfileOpen(true);
         return;
+      }
+      if (e.key === "e" || e.key === "E") {
+        if (session?.status === "active" && !end && !busy && nearbyNodeIdx !== null) {
+          e.preventDefault();
+          void handleInteract();
+          return;
+        }
       }
       if (e.key === "?" || (e.shiftKey && e.key === "/")) {
         e.preventDefault();
@@ -326,6 +374,10 @@ export default function HomePage() {
     session,
     settingsOpen,
     start,
+    handleInteract,
+    nearbyNodeIdx,
+    end,
+    busy,
   ]);
 
   const dialogs = (
@@ -430,7 +482,7 @@ export default function HomePage() {
       </button>
 
       <div style={styles.stage}>
-        <JourneyCanvas
+        <WorldCanvasEl
           nodes={journey.nodes}
           zoneIndex={session.zoneIndex}
           status={session.status}
@@ -439,6 +491,10 @@ export default function HomePage() {
           graphicsQuality={settings.graphicsQuality}
           reducedMotion={settings.reducedMotion}
           cameraShake={settings.cameraShake}
+          playerPosition={playerPos}
+          onMove={setPlayerPos}
+          nearbyNodeIdx={nearbyNodeIdx}
+          onProximityChange={setNearbyNodeIdx}
         />
         <Hud
           session={session}
@@ -446,8 +502,9 @@ export default function HomePage() {
           totalNodes={journey.nodes.length}
           log={log}
           busy={busy}
-          onAdvance={advance}
-          canAdvance={session.status === "active" && !end}
+          nearbyNodeIdx={nearbyNodeIdx}
+          nearNode={journey.nodes[nearbyNodeIdx ?? -1] ?? undefined}
+          onInteract={handleInteract}
           inventoryOpen={inventoryOpen}
           onInventoryOpenChange={setInventoryOpen}
           showHotkeyHints={settings.showHotkeyHints}

@@ -12,8 +12,9 @@ type Props = {
   totalNodes: number;
   log: string[];
   busy: boolean;
-  canAdvance: boolean;
-  onAdvance: () => void;
+  nearbyNodeIdx: number | null;
+  nearNode?: JourneyNode;
+  onInteract: () => void;
   inventoryOpen: boolean;
   onInventoryOpenChange: (open: boolean) => void;
   showHotkeyHints?: boolean;
@@ -26,8 +27,9 @@ export function Hud({
   totalNodes,
   log,
   busy,
-  canAdvance,
-  onAdvance,
+  nearbyNodeIdx,
+  nearNode,
+  onInteract,
   inventoryOpen,
   onInventoryOpenChange,
   showHotkeyHints,
@@ -82,12 +84,14 @@ export function Hud({
           </p>
           {log[0] && <p style={styles.logLine}>{log[0]}</p>}
           {showHotkeyHints && (
-            <p style={styles.hintLine}>Space advance · I fragments · S settings · ? keys</p>
+            <p style={styles.hintLine}>WASD move · E interact · I fragments · S settings · ? keys</p>
           )}
         </div>
-        <button type="button" disabled={!canAdvance || busy} onClick={onAdvance} style={styles.advance}>
-          {busy ? "Resolving…" : "Advance"}
-        </button>
+        {nearbyNodeIdx !== null && nearNode && (
+          <button type="button" disabled={busy} onClick={onInteract} style={styles.interact}>
+            {busy ? "..." : `E — ${nearNode.kind} · ${nearNode.label}`}
+          </button>
+        )}
       </div>
 
       <InventoryPanel
@@ -185,17 +189,18 @@ const styles: Record<string, React.CSSProperties> = {
   nodeMeta: { margin: "4px 0 0", fontSize: 12, opacity: 0.75 },
   logLine: { margin: "10px 0 0", fontSize: 12, opacity: 0.8 },
   hintLine: { margin: "8px 0 0", fontSize: 11, opacity: 0.55, fontWeight: 600 },
-  advance: {
+  interact: {
     pointerEvents: "auto",
     border: "none",
-    background: "linear-gradient(135deg, #ff6b4a, #e84a2f)",
-    color: "#fff",
+    background: "linear-gradient(135deg, #ffd166, #ff6b4a)",
+    color: "#1b1f3b",
     borderRadius: 16,
-    padding: "18px 28px",
+    padding: "18px 32px",
     fontWeight: 800,
     fontSize: 16,
-    boxShadow: "0 12px 32px rgba(232, 74, 47, 0.45)",
+    boxShadow: "0 12px 32px rgba(255,107,74,0.5)",
     whiteSpace: "nowrap",
+    cursor: "pointer",
   },
   resourceRow: {
     marginBottom: 8,
